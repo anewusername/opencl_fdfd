@@ -83,10 +83,6 @@ def cg_solver(omega, dxes, J, epsilon, mu=None, pec=None, pmc=None, adjoint=Fals
     Pl = load_field(L.diagonal())
     Pr = load_field(R.diagonal())
 
-    mu = numpy.ones_like(epsilon)
-    # pec = numpy.zeros_like(epsilon)
-    # pmc = numpy.zeros_like(epsilon)
-
     if mu is None:
         invm = load_field(numpy.array([]))
     else:
