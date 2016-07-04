@@ -91,12 +91,12 @@ def cg_solver(omega, dxes, J, epsilon, mu=None, pec=None, pmc=None, adjoint=Fals
     if pec is None:
         gpec = load_field(numpy.array([]), dtype=numpy.int8)
     else:
-        gpec = load_field(pec, dtype=numpy.int8)
+        gpec = load_field(pec.astype(bool), dtype=numpy.int8)
 
     if pmc is None:
         gpmc = load_field(numpy.array([]), dtype=numpy.int8)
     else:
-        gpmc = load_field(pmc, dtype=numpy.int8)
+        gpmc = load_field(pmc.astype(bool), dtype=numpy.int8)
 
     '''
     Generate OpenCL kernels

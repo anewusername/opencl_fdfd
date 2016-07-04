@@ -34,9 +34,7 @@ if ( z == 0 ) {
 
 //Update E components; set them to 0 if PEC is enabled there.
 {% if pec -%}
-if (pec[XX + i]) {
-    Ex[i] = cdouble_new(0.0, 0.0);
-} else
+if (pec[XX + i] == 0)
 {%- endif -%}
 {
     cdouble_t tEx = cdouble_mul(Ex[i], oeps[XX + i]);
@@ -47,9 +45,7 @@ if (pec[XX + i]) {
 }
 
 {% if pec -%}
-if (pec[YY + i]) {
-    Ey[i] = cdouble_new(0.0, 0.0);
-} else
+if (pec[YY + i] == 0)
 {%- endif -%}
 {
     cdouble_t tEy = cdouble_mul(Ey[i], oeps[YY + i]);
@@ -60,9 +56,7 @@ if (pec[YY + i]) {
 }
 
 {% if pec -%}
-if (pec[ZZ + i]) {
-    Ez[i] = cdouble_new(0.0, 0.0);
-} else
+if (pec[ZZ + i] == 0)
 {%- endif -%}
 {
     cdouble_t tEz = cdouble_mul(Ez[i], oeps[ZZ + i]);

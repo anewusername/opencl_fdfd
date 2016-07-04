@@ -35,7 +35,7 @@ if ( z == sz - 1 ) {
 //Update H components; set them to 0 if PMC is enabled there.
 // Also divide by mu only if requested.
 {% if pmc -%}
-if (pmc[XX + i]) {
+if (pmc[XX + i] != 0) {
     Hx[i] = cdouble_new(0.0, 0.0);
 } else
 {%- endif -%}
@@ -51,7 +51,7 @@ if (pmc[XX + i]) {
 }
 
 {% if pmc -%}
-if (pmc[YY + i]) {
+if (pmc[YY + i] != 0) {
     Hy[i] = cdouble_new(0.0, 0.0);
 } else
 {%- endif -%}
@@ -67,8 +67,8 @@ if (pmc[YY + i]) {
 }
 
 {% if pmc -%}
-if (pmc[XX + i]) {
-    Hx[i] = cdouble_new(0.0, 0.0);
+if (pmc[ZZ + i] != 0) {
+    Hz[i] = cdouble_new(0.0, 0.0);
 } else
 {%- endif -%}
 {

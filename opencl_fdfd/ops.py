@@ -101,15 +101,18 @@ def create_a(context, shape, mu=False, pec=False, pmc=False):
     header = shape_source(shape) + dixyz_source + xyz_source
     vec_h = vec_source + E_ptrs + H_ptrs
 
-    p2e_source = 'E[i] = cdouble_mul(Pr[i], p[i]);'
+    pec_arg = ['char *pec']
+    pmc_arg = ['char *pmc']
+    des = [ctype + ' *inv_de' + a for a in 'xyz']
+    dhs = [ctype + ' *inv_dh' + a for a in 'xyz']
+
+    p2e_source = jinja_env.get_template('p2e.cl').render(pec=pec)
     P2E_kernel = ElementwiseKernel(context,
                                    name='P2E',
                                    preamble=preamble,
                                    operation=p2e_source,
-                                   arguments=', '.join(ptrs('E', 'p', 'Pr')))
+                                   arguments=', '.join(ptrs('E', 'p', 'Pr') + pec_arg))
 
-    pmc_arg = ['char *pmc']
-    des = [ctype + ' *inv_de' + a for a in 'xyz']
     e2h_source = jinja_env.get_template('e2h.cl').render(mu=mu,
                                                          pmc=pmc,
                                                          dixyz_source=header,
@@ -120,8 +123,6 @@ def create_a(context, shape, mu=False, pec=False, pmc=False):
                                    operation=e2h_source,
                                    arguments=', '.join(ptrs('E', 'H', 'inv_mu') + pmc_arg + des))
 
-    pec_arg = ['char *pec']
-    dhs = [ctype + ' *inv_dh' + a for a in 'xyz']
     h2e_source = jinja_env.get_template('h2e.cl').render(pmc=pec,
                                                          dixyz_source=header,
                                                          vec_source=vec_h)
@@ -132,7 +133,7 @@ def create_a(context, shape, mu=False, pec=False, pmc=False):
                                    arguments=', '.join(ptrs('E', 'H', 'oeps', 'Pl') + pec_arg + dhs))
 
     def spmv(E, H, p, idxes, oeps, inv_mu, pec, pmc, Pl, Pr, e):
-        e2 = P2E_kernel(E, p, Pr, wait_for=e)
+        e2 = P2E_kernel(E, p, Pr, pec, wait_for=e)
         e2 = E2H_kernel(E, H, inv_mu, pmc, *idxes[0], wait_for=[e2])
         e2 = H2E_kernel(E, H, oeps, Pl, pec, *idxes[1], wait_for=[e2])
         return [e2]
