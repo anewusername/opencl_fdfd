@@ -253,6 +253,6 @@ def create_a_csr(context):
                                     arguments=', '.join((v_out_args, m_args, v_in_args)))
 
     def spmv(v_out, m, v_in, e):
-        return spmv_kernel(v_out, m.row_ptr, m.col_ind, m.data, v_in, wait_for=e)
+        return [spmv_kernel(v_out, m.row_ptr, m.col_ind, m.data, v_in, wait_for=e)]
 
     return spmv
