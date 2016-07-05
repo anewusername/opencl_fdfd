@@ -109,6 +109,9 @@ def cg(a, b, max_iters=10000, err_thresh=1e-6, context=None, queue=None, verbose
 
 
 def cg_solver(omega, dxes, J, epsilon, mu=None, pec=None, pmc=None, adjoint=False, solver_opts=None):
+    if solver_opts is None:
+        solver_opts = dict()
+
     b0 = -1j * omega * J
     A0 = fdfd_tools.operators.e_full(omega, dxes, epsilon=epsilon, mu=mu, pec=pec, pmc=pmc)
 
