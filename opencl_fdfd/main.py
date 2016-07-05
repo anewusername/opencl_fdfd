@@ -172,3 +172,4 @@ def cg_solver(omega, dxes, J, epsilon, mu=None, pec=None, pmc=None, adjoint=Fals
         A0 = A0.T
     print('Post-everything residual:', norm(A0 @ x - b) / norm(b))
     return x
+
