@@ -54,9 +54,6 @@ def cg(a, b, max_iters=10000, err_thresh=1e-6, context=None, queue=None, verbose
     p_step = ops.create_p_step(context)
     dot = ops.create_dot(context)
 
-    def a_step(E, H, p, events):
-        return a_step_full(E, H, p, inv_dxes, oeps, invm, gpec, gpmc, Pl, Pr, events)
-
     '''
     Start the solve
     '''
