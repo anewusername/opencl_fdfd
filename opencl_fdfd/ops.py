@@ -123,7 +123,7 @@ def create_a(context, shape, mu=False, pec=False, pmc=False):
                                    operation=e2h_source,
                                    arguments=', '.join(ptrs('E', 'H', 'inv_mu') + pmc_arg + des))
 
-    h2e_source = jinja_env.get_template('h2e.cl').render(pmc=pmc,
+    h2e_source = jinja_env.get_template('h2e.cl').render(pec=pec,
                                                          dixyz_source=header,
                                                          vec_source=vec_h)
     H2E_kernel = ElementwiseKernel(context,
