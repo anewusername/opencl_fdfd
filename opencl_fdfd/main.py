@@ -19,8 +19,11 @@ def cg_solver(omega, dxes, J, epsilon, mu=None, pec=None, pmc=None, adjoint=Fals
     shape = [d.size for d in dxes[0]]
 
     '''
-        ** In this comment, I use the notation M* = conj(M),
-           M.T = transpose(M), M' = ctranspose(M), M N = dot(M, N)
+        ** In this comment, I use the following notation:
+           M* = conj(M),
+           M.T = transpose(M),
+           M' = ctranspose(M),
+           M N = dot(M, N)
 
         This solver uses a symmetrized wave operator M = (L A R) = (L A R).T
          (where L = inv(R) are diagonal preconditioner matrices) when
