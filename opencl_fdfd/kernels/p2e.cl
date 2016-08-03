@@ -2,7 +2,7 @@
  * Apply PEC and preconditioner.
  *
  * Template parameters:
- *  pec         false iff no PEC anyhwere
+ *  pec         false iff no PEC anywhere
  *
  * Arguments:
  *  ctype *E    (output) E-field
