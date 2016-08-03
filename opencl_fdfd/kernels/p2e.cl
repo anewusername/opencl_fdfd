@@ -2,7 +2,6 @@
  * Apply PEC and preconditioner.
  *
  * Template parameters:
- *  ctype       name of complex type (eg. cdouble)
  *  pec         false iff no PEC anyhwere
  *
  * Arguments:
@@ -11,12 +10,6 @@
  *  ctype *p    (input vector)
  *
  */
-
-
-//Defines to clean up operation names
-#define ctype {{ctype}}_t
-#define zero {{ctype}}_new(0.0, 0.0)
-#define mul {{ctype}}_mul
 
 
 {%- if pec -%}

@@ -24,9 +24,9 @@ __global ctype *oeps_x = oeps + XX;
 __global ctype *oeps_y = oeps + YY;
 __global ctype *oeps_z = oeps + ZZ;
 
-__global ctype *pec_x = pec + XX;
-__global ctype *pec_y = pec + YY;
-__global ctype *pec_z = pec + ZZ;
+__global char *pec_x = pec + XX;
+__global char *pec_y = pec + YY;
+__global char *pec_z = pec + ZZ;
 
 __global ctype *Pl_x = Pl + XX;
 __global ctype *Pl_y = Pl + YY;

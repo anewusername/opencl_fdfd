@@ -23,9 +23,9 @@ __global ctype *inv_mu_x = inv_mu + XX;
 __global ctype *inv_mu_y = inv_mu + YY;
 __global ctype *inv_mu_z = inv_mu + ZZ;
 
-__global ctype *pmc_x = pmc + XX;
-__global ctype *pmc_y = pmc + YY;
-__global ctype *pmc_z = pmc + ZZ;
+__global char *pmc_x = pmc + XX;
+__global char *pmc_y = pmc + YY;
+__global char *pmc_z = pmc + ZZ;
 
 /*
  * Implement periodic boundary conditions

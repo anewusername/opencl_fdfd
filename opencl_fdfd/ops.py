@@ -28,14 +28,20 @@ def type_to_C(float_type: numpy.float32 or numpy.float64) -> str:
 
     return types[float_type]
 
+ctype = type_to_C(numpy.complex128)
+ctype_bare = 'cdouble'
 
 preamble = '''
 #define PYOPENCL_DEFINE_CDOUBLE
 #include <pyopencl-complex.h>
 
-'''
-
-ctype = type_to_C(numpy.complex128)
+//Defines to clean up operation and type names
+#define ctype {ctype}_t
+#define zero {ctype}_new(0.0, 0.0)
+#define add {ctype}_add
+#define sub {ctype}_sub
+#define mul {ctype}_mul
+'''.format(ctype=ctype_bare)
 
 
 def ptrs(*args):
@@ -44,16 +50,14 @@ def ptrs(*args):
 
 def create_a(context, shape, mu=False, pec=False, pmc=False):
 
-    common_source = jinja_env.get_template('common.cl').render(shape=shape,
-                                                               ctype=ctype)
+    common_source = jinja_env.get_template('common.cl').render(shape=shape)
 
     pec_arg = ['char *pec']
     pmc_arg = ['char *pmc']
     des = [ctype + ' *inv_de' + a for a in 'xyz']
     dhs = [ctype + ' *inv_dh' + a for a in 'xyz']
 
-    p2e_source = jinja_env.get_template('p2e.cl').render(pec=pec,
-                                                         ctype=ctype)
+    p2e_source = jinja_env.get_template('p2e.cl').render(pec=pec)
     P2E_kernel = ElementwiseKernel(context,
                                    name='P2E',
                                    preamble=preamble,

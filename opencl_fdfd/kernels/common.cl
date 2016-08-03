@@ -1,21 +1,13 @@
 /* Common code for E, H updates
  *
  * Template parameters:
- *  ctype       string denoting type for storing complex field values
  *  shape       list of 3 ints specifying shape of fields
  */
 
-//Defines to clean up operation names
-#define ctype {{ctype}}_t
-#define zero {{ctype}}_new(0.0, 0.0)
-#define add {{ctype}}_add
-#define sub {{ctype}}_sub
-#define mul {{ctype}}_mul
-
 // Field sizes
-const int sx = {shape[0]};
-const int sy = {shape[1]};
-const int sz = {shape[2]};
+const int sx = {{shape[0]}};
+const int sy = {{shape[1]}};
+const int sz = {{shape[2]}};
 
 //Since we use i to index into Ex[], E[], ... rather than E[], do nothing if
 // i is outside the bounds of Ex[].
