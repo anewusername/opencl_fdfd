@@ -1,17 +1,45 @@
 /*
- *
  * E update equations
+ *
+ * Template parameters:
+ *  pec         False if no PEC anywhere
+ *  common_cl   Rendered code from common.cl
+ *
+ * Arguments:
+ *  ctype *E        E-field
+ *  ctype *H        H-field
+ *  ctype *oeps     omega*epsilon (at E-field locations)
+ *  ctype *Pl       Entries of (diagonal) left preconditioner matrix
+ *  char  *pec      Boolean mask denoting presence of PEC (at E-field locations)
+ *  ctype *inv_dhx  1/dx_h (complex cell widths for x direction at H locations)
+ *  ctype *inv_dhy  1/dy_h (complex cell widths for y direction at H locations)
+ *  ctype *inv_dhz  1/dz_h (complex cell widths for z direction at H locations)
  *
  */
 
-//Define sx, x, dix (and y, z versions of those)
-{{dixyz_source}}
-
-//Define vectorized fields and pointers (eg. Hx = H + XX)
-{{vec_source}}
+{{common_cl}}
 
 
-// Wrap indices if necessary
+__global ctype *oeps_x = oeps + XX;
+__global ctype *oeps_y = oeps + YY;
+__global ctype *oeps_z = oeps + ZZ;
+
+__global ctype *pec_x = pec + XX;
+__global ctype *pec_y = pec + YY;
+__global ctype *pec_z = pec + ZZ;
+
+__global ctype *Pl_x = Pl + XX;
+__global ctype *Pl_y = Pl + YY;
+__global ctype *Pl_z = Pl + ZZ;
+
+
+/*
+ * Implement periodic boundary conditions
+ *
+ * imx gives the index of the adjacent cell in the minus-x direction ([i]ndex [m]inus [x]).
+ * In the event that we start at x == 0, we actually want to wrap around and grab the cell
+ * where x == (sx - 1) instead, ie. imx = i + (sx - 1) * dix .
+ */
 int imx, imy, imz;
 if ( x == 0 ) {
   imx = i + (sx - 1) * dix;
@@ -34,38 +62,38 @@ if ( z == 0 ) {
 
 //Update E components; set them to 0 if PEC is enabled there.
 {% if pec -%}
-if (pec[XX + i] == 0)
+if (pec_x[i] == 0)
 {%- endif -%}
 {
-    cdouble_t tEx = cdouble_mul(Ex[i], oeps[XX + i]);
-    cdouble_t Dzy = cdouble_mul(cdouble_sub(Hz[i], Hz[imy]), inv_dhy[y]);
-    cdouble_t Dyz = cdouble_mul(cdouble_sub(Hy[i], Hy[imz]), inv_dhz[z]);
-    tEx = cdouble_add(tEx, cdouble_sub(Dzy, Dyz));
-    Ex[i] = cdouble_mul(tEx, Pl[XX + i]);
+    ctype tEx = mul(Ex[i], oeps_x[i]);
+    ctype Dzy = mul(sub(Hz[i], Hz[imy]), inv_dhy[y]);
+    ctype Dyz = mul(sub(Hy[i], Hy[imz]), inv_dhz[z]);
+    tEx = add(tEx, sub(Dzy, Dyz));
+    Ex[i] = mul(tEx, Pl_x[i]);
 }
 
 {% if pec -%}
-if (pec[YY + i] == 0)
+if (pec_y[i] == 0)
 {%- endif -%}
 {
-    cdouble_t tEy = cdouble_mul(Ey[i], oeps[YY + i]);
-    cdouble_t Dxz = cdouble_mul(cdouble_sub(Hx[i], Hx[imz]), inv_dhz[z]);
-    cdouble_t Dzx = cdouble_mul(cdouble_sub(Hz[i], Hz[imx]), inv_dhx[x]);
-    tEy = cdouble_add(tEy, cdouble_sub(Dxz, Dzx));
-    Ey[i] = cdouble_mul(tEy, Pl[YY + i]);
+    ctype tEy = mul(Ey[i], oeps_y[i]);
+    ctype Dxz = mul(sub(Hx[i], Hx[imz]), inv_dhz[z]);
+    ctype Dzx = mul(sub(Hz[i], Hz[imx]), inv_dhx[x]);
+    tEy = add(tEy, sub(Dxz, Dzx));
+    Ey[i] = mul(tEy, Pl_y[i]);
 }
 
 {% if pec -%}
-if (pec[ZZ + i] == 0)
+if (pec_z[i] == 0)
 {%- endif -%}
 {
-    cdouble_t tEz = cdouble_mul(Ez[i], oeps[ZZ + i]);
-    cdouble_t Dyx = cdouble_mul(cdouble_sub(Hy[i], Hy[imx]), inv_dhx[x]);
-    cdouble_t Dxy = cdouble_mul(cdouble_sub(Hx[i], Hx[imy]), inv_dhy[y]);
-    tEz = cdouble_add(tEz, cdouble_sub(Dyx, Dxy));
-    Ez[i] = cdouble_mul(tEz, Pl[ZZ + i]);
+    ctype tEz = mul(Ez[i], oeps_z[i]);
+    ctype Dyx = mul(sub(Hy[i], Hy[imx]), inv_dhx[x]);
+    ctype Dxy = mul(sub(Hx[i], Hx[imy]), inv_dhy[y]);
+    tEz = add(tEz, sub(Dyx, Dxy));
+    Ez[i] = mul(tEz, Pl_z[i]);
 }
 
 /*
- * End H update equations
+ * End E update equations
  */

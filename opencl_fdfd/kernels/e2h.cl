@@ -1,17 +1,39 @@
 /*
- *
  * H update equations
+ *
+ * Template parameters:
+ *  mu          False if (mu == 1) everywhere
+ *  pmc         False if no PMC anywhere
+ *  common_cl   Rendered code from common.cl
+ *
+ * Arguments:
+ *  ctype *E        E-field
+ *  ctype *H        H-field
+ *  ctype *inv_mu   1/mu (at H-field locations)
+ *  char  *pmc      Boolean mask denoting presence of PMC (at H-field locations)
+ *  ctype *inv_dex  1/dx_e (complex cell widths for x direction at E locations)
+ *  ctype *inv_dey  1/dy_e (complex cell widths for y direction at E locations)
+ *  ctype *inv_dez  1/dz_e (complex cell widths for z direction at E locations)
  *
  */
 
-//Define sx, x, dix (and y, z versions of those)
-{{dixyz_source}}
+{{common_cl}}
 
-//Define vectorized fields and pointers (eg. Hx = H + XX)
-{{vec_source}}
+__global ctype *inv_mu_x = inv_mu + XX;
+__global ctype *inv_mu_y = inv_mu + YY;
+__global ctype *inv_mu_z = inv_mu + ZZ;
 
+__global ctype *pmc_x = pmc + XX;
+__global ctype *pmc_y = pmc + YY;
+__global ctype *pmc_z = pmc + ZZ;
 
-// Wrap indices if necessary
+/*
+ * Implement periodic boundary conditions
+ *
+ * ipx gives the index of the adjacent cell in the plus-x direction ([i]ndex [p]lus [x]).
+ * In the event that we start at x == (sx - 1), we actually want to wrap around and grab the cell
+ * where x == 0 instead, ie. ipx = i - (sx - 1) * dix .
+ */
 int ipx, ipy, ipz;
 if ( x == sx - 1 ) {
   ipx = i - (sx - 1) * dix;
@@ -32,53 +54,56 @@ if ( z == sz - 1 ) {
 }
 
 
-//Update H components; set them to 0 if PMC is enabled there.
-// Also divide by mu only if requested.
+//Update H components; set them to 0 if PMC is enabled at that location.
+//Mu division and PMC conditional are only included if {{mu}} and {{pmc}} are true
 {% if pmc -%}
-if (pmc[XX + i] != 0) {
-    Hx[i] = cdouble_new(0.0, 0.0);
+if (pmc_x[i] != 0) {
+    Hx[i] = zero;
 } else
 {%- endif -%}
 {
-    cdouble_t Dzy = cdouble_mul(cdouble_sub(Ez[ipy], Ez[i]), inv_dey[y]);
-    cdouble_t Dyz = cdouble_mul(cdouble_sub(Ey[ipz], Ey[i]), inv_dez[z]);
+    ctype Dzy = mul(sub(Ez[ipy], Ez[i]), inv_dey[y]);
+    ctype Dyz = mul(sub(Ey[ipz], Ey[i]), inv_dez[z]);
+    ctype x_curl = sub(Dzy, Dyz);
 
     {%- if mu -%}
-    Hx[i] = cdouble_mul(inv_mu[XX + i], cdouble_sub(Dzy, Dyz));
+    Hx[i] = mul(inv_mu_x[i], x_curl);
     {%- else -%}
-    Hx[i] = cdouble_sub(Dzy, Dyz);
+    Hx[i] = x_curl;
     {%- endif %}
 }
 
 {% if pmc -%}
-if (pmc[YY + i] != 0) {
-    Hy[i] = cdouble_new(0.0, 0.0);
+if (pmc_y[i] != 0) {
+    Hy[i] = zero;
 } else
 {%- endif -%}
 {
-    cdouble_t Dxz = cdouble_mul(cdouble_sub(Ex[ipz], Ex[i]), inv_dez[z]);
-    cdouble_t Dzx = cdouble_mul(cdouble_sub(Ez[ipx], Ez[i]), inv_dex[x]);
+    ctype Dxz = mul(sub(Ex[ipz], Ex[i]), inv_dez[z]);
+    ctype Dzx = mul(sub(Ez[ipx], Ez[i]), inv_dex[x]);
+    ctype y_curl = sub(Dxz, Dzx);
 
     {%- if mu -%}
-    Hy[i] = cdouble_mul(inv_mu[YY + i], cdouble_sub(Dxz, Dzx));
+    Hy[i] = mul(inv_mu_y[i], y_curl);
     {%- else -%}
-    Hy[i] = cdouble_sub(Dxz, Dzx);
+    Hy[i] = y_curl;
     {%- endif %}
 }
 
 {% if pmc -%}
-if (pmc[ZZ + i] != 0) {
-    Hz[i] = cdouble_new(0.0, 0.0);
+if (pmc_z[i] != 0) {
+    Hz[i] = zero;
 } else
 {%- endif -%}
 {
-    cdouble_t Dyx = cdouble_mul(cdouble_sub(Ey[ipx], Ey[i]), inv_dex[x]);
-    cdouble_t Dxy = cdouble_mul(cdouble_sub(Ex[ipy], Ex[i]), inv_dey[y]);
+    ctype Dyx = mul(sub(Ey[ipx], Ey[i]), inv_dex[x]);
+    ctype Dxy = mul(sub(Ex[ipy], Ex[i]), inv_dey[y]);
+    ctype z_curl = sub(Dyx, Dxy);
 
     {%- if mu -%}
-    Hz[i] = cdouble_mul(inv_mu[ZZ + i], cdouble_sub(Dyx, Dxy));
+    Hz[i] = mul(inv_mu_z[i], z_curl);
     {%- else -%}
-    Hz[i] = cdouble_sub(Dyx, Dxy);
+    Hz[i] = z_curl;
     {%- endif %}
 }
 
