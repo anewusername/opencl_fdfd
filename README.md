@@ -51,10 +51,14 @@ pip install git+https://mpxd.net/gogs/jan/opencl_fdfd.git@release
 
 See the documentation for ```opencl_fdfd.cg_solver(...)```
 (located in ```main.py```) for details about how to call the solver.
+The FDFD arguments are identical to those in
+```fdfd_tools.solvers.generic(...)```, and a few solver-specific
+arguments are available.
  
 An alternate (slower) FDFD solver and a general gpu-based sparse matrix
 solver is available in ```csr.py```. These aren't particularly
 well-optimized, and something like
 [MAGMA](http://icl.cs.utk.edu/magma/index.html) would probably be a
 better choice if you absolutely need to solve arbitrary sparse matrices
-and can tolerate writing and compiling C/C++ code.
+and can tolerate writing and compiling C/C++ code. Still, they're
+usually quite a bit faster than the scipy.linalg solvers.
