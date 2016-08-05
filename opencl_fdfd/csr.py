@@ -14,7 +14,7 @@ satisfy the constraints for the 'conjugate gradient' algorithm
 (positive definite, symmetric) and some that don't.
 """
 
-from typing import List, Dict, Any
+from typing import Dict, Any
 import time
 
 import numpy
@@ -22,7 +22,7 @@ from numpy.linalg import norm
 import pyopencl
 import pyopencl.array
 
-import fdfd_tools.operators
+import fdfd_tools.solvers
 
 from . import ops
 
@@ -43,7 +43,7 @@ class CSRMatrix(object):
         self.data = pyopencl.array.to_device(queue, m.data.astype(numpy.complex128))
 
 
-def cg(a: 'scipy.sparse.csr_matrix',
+def cg(A: 'scipy.sparse.csr_matrix',
        b: numpy.ndarray,
        max_iters: int = 10000,
        err_threshold: float = 1e-6,
@@ -54,7 +54,7 @@ def cg(a: 'scipy.sparse.csr_matrix',
     """
     General conjugate-gradient solver for sparse matrices, where A @ x = b.
 
-    :param a: Matrix to solve (CSR format)
+    :param A: Matrix to solve (CSR format)
     :param b: Right-hand side vector (dense ndarray)
     :param max_iters: Maximum number of iterations
     :param err_threshold: Error threshold for successful solve, relative to norm(b)
@@ -84,7 +84,7 @@ def cg(a: 'scipy.sparse.csr_matrix',
     rho = 1.0 + 0j
     errs = []
 
-    m = CSRMatrix(queue, a)
+    m = CSRMatrix(queue, A)
 
     '''
     Generate OpenCL kernels
@@ -102,7 +102,8 @@ def cg(a: 'scipy.sparse.csr_matrix',
 
     _, err2 = rhoerr_step(r, [])
     b_norm = numpy.sqrt(err2)
-    print('b_norm check: ', b_norm)
+    if verbose:
+        print('b_norm check: ', b_norm)
 
     success = False
     for k in range(max_iters):
@@ -126,7 +127,7 @@ def cg(a: 'scipy.sparse.csr_matrix',
         e = a_step(v, m, p, e)
         alpha = rho / dot(p, v, e)
 
-        if k % 1000 == 0:
+        if verbose and k % 1000 == 0:
             print(k)
 
     '''
@@ -136,71 +137,43 @@ def cg(a: 'scipy.sparse.csr_matrix',
 
     x = x.get()
 
-    if success:
-        print('Success', end='')
-    else:
-        print('Failure', end=', ')
-    print(', {} iterations in {} sec: {} iterations/sec \
-                  '.format(k, time_elapsed, k / time_elapsed))
-    print('final error', errs[-1])
-    print('overhead {} sec'.format(start_time2 - start_time))
+    if verbose:
+        if success:
+            print('Success', end='')
+        else:
+            print('Failure', end=', ')
+        print(', {} iterations in {} sec: {} iterations/sec \
+                      '.format(k, time_elapsed, k / time_elapsed))
+        print('final error', errs[-1])
+        print('overhead {} sec'.format(start_time2 - start_time))
 
-    print('Final residual:', norm(a @ x - b) / norm(b))
+        print('Final residual:', norm(A @ x - b) / norm(b))
     return x
 
 
-def fdfd_cg_solver(omega: complex,
-                   dxes: List[List[numpy.ndarray]],
-                   J: numpy.ndarray,
-                   epsilon: numpy.ndarray,
-                   mu: numpy.ndarray = None,
-                   pec: numpy.ndarray = None,
-                   pmc: numpy.ndarray = None,
-                   adjoint: bool = False,
-                   solver_opts: Dict[str, Any] = None,
+def fdfd_cg_solver(solver_opts: Dict[str, Any] = None,
+                   **fdfd_args
                    ) -> numpy.ndarray:
     """
     Conjugate gradient FDFD solver using CSR sparse matrices, mainly for
      testing and development since it's much slower than the solver in main.py.
 
-    All ndarray arguments should be 1D arrays. To linearize a list of 3 3D ndarrays,
-     either use fdfd_tools.vec() or numpy:
-     f_1D = numpy.hstack(tuple((fi.flatten(order='F') for fi in [f_x, f_y, f_z])))
+    Calls fdfd_tools.solvers.generic(**fdfd_args,
+                                     matrix_solver=opencl_fdfd.csr.cg,
+                                     matrix_solver_opts=solver_opts)
 
-    :param omega: Complex frequency to solve at.
-    :param dxes: [[dx_e, dy_e, dz_e], [dx_h, dy_h, dz_h]] (complex cell sizes)
-    :param J: Electric current distribution (at E-field locations)
-    :param epsilon: Dielectric constant distribution (at E-field locations)
-    :param mu: Magnetic permeability distribution (at H-field locations)
-    :param pec: Perfect electric conductor distribution
-        (at E-field locations; non-zero value indicates PEC is present)
-    :param pmc: Perfect magnetic conductor distribution
-        (at H-field locations; non-zero value indicates PMC is present)
-    :param adjoint: If true, solves the adjoint problem.
-    :param solver_opts: Passed as kwargs to opencl_fdfd.csr.cg(**solver_opts)
+    :param solver_opts: Passed as matrix_solver_opts to fdfd_tools.solver.generic(...).
+        Default {}.
+    :param fdfd_args: Passed as **fdfd_args to fdfd_tools.solver.generic(...).
+        Should include all of the arguments **except** matrix_solver and matrix_solver_opts
     :return: E-field which solves the system.
     """
 
     if solver_opts is None:
         solver_opts = dict()
 
-    b0 = -1j * omega * J
-    A0 = fdfd_tools.operators.e_full(omega, dxes, epsilon=epsilon, mu=mu, pec=pec, pmc=pmc)
+    x = fdfd_tools.solvers.generic(matrix_solver=cg,
+                                   matrix_solver_opts=solver_opts,
+                                   **fdfd_args)
 
-    Pl, Pr = fdfd_tools.operators.e_full_preconditioners(dxes)
-
-    if adjoint:
-        A = (Pl @ A0 @ Pr).H
-        b = Pr.H @ b0
-    else:
-        A = Pl @ A0 @ Pr
-        b = Pl @ b0
-
-    x = cg(A.tocsr(), b, **solver_opts)
-
-    if adjoint:
-        x0 = Pl.H @ x
-    else:
-        x0 = Pr @ x
-
-    return x0
+    return x
