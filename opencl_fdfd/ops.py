@@ -1,3 +1,5 @@
+from typing import List, Callable
+
 import numpy
 import jinja2
 
@@ -8,6 +10,9 @@ from pyopencl.reduction import ReductionKernel
 
 # Create jinja2 env on module load
 jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, 'kernels'))
+
+# Return type for the create_opname(...) functions
+operation = Callable[..., List[pyopencl.Event]]
 
 
 def type_to_C(float_type: numpy.float32 or numpy.float64) -> str:
@@ -28,9 +33,11 @@ def type_to_C(float_type: numpy.float32 or numpy.float64) -> str:
 
     return types[float_type]
 
+# Type names
 ctype = type_to_C(numpy.complex128)
 ctype_bare = 'cdouble'
 
+# Preamble for all OpenCL code
 preamble = '''
 #define PYOPENCL_DEFINE_CDOUBLE
 #include <pyopencl-complex.h>
@@ -44,11 +51,43 @@ preamble = '''
 '''.format(ctype=ctype_bare)
 
 
-def ptrs(*args):
+def ptrs(*args: str) -> List[str]:
     return [ctype + ' *' + s for s in args]
 
 
-def create_a(context, shape, mu=False, pec=False, pmc=False):
+def create_a(context: pyopencl.Context,
+             shape: numpy.ndarray,
+             mu: bool = False,
+             pec: bool = False,
+             pmc: bool = False,
+             ) -> operation:
+    """
+    Return a function which performs (A @ p), where A is the FDFD wave equation for E-field.
+
+    The returned function has the signature
+    spmv(E, H, p, idxes, oeps, inv_mu, pec, pmc, Pl, Pr, e)
+    with arguments (all except e are of type pyopencl.array.Array (or contain it)):
+     E      E-field (output)
+     H      Temporary variable for holding intermediate H-field values on GPU (same size as E)
+     p      p-vector (input vector)
+     idxes  list holding [[1/dx_e, 1/dy_e, 1/dz_e],  [1/dx_h, 1/dy_h, 1/dz_h]] (complex cell widths)
+     oeps   omega * epsilon
+     inv_mu 1/mu
+     pec    array of bytes; nonzero value indicates presence of PEC
+     pmc    array of bytes; nonzero value indicates presence of PMC
+     Pl     Left preconditioner (array containing diagonal entries only)
+     Pr     Right preconditioner (array containing diagonal entries only)
+     e      List of pyopencl.Event; execution will wait until these are finished.
+
+     and returns a list of pyopencl.Event.
+
+    :param context: PyOpenCL context
+    :param shape: Dimensions of the E-field
+    :param mu: False iff (mu == 1) everywhere
+    :param pec: False iff no PEC anywhere
+    :param pmc: False iff no PMC anywhere
+    :return: Function for computing (A @ p)
+    """
 
     common_source = jinja_env.get_template('common.cl').render(shape=shape)
 
@@ -57,6 +96,9 @@ def create_a(context, shape, mu=False, pec=False, pmc=False):
     des = [ctype + ' *inv_de' + a for a in 'xyz']
     dhs = [ctype + ' *inv_dh' + a for a in 'xyz']
 
+    '''
+    Convert p to initial E (ie, apply right preconditioner and PEC)
+    '''
     p2e_source = jinja_env.get_template('p2e.cl').render(pec=pec)
     P2E_kernel = ElementwiseKernel(context,
                                    name='P2E',
@@ -64,6 +106,9 @@ def create_a(context, shape, mu=False, pec=False, pmc=False):
                                    operation=p2e_source,
                                    arguments=', '.join(ptrs('E', 'p', 'Pr') + pec_arg))
 
+    '''
+    Calculate intermediate H from intermediate E
+    '''
     e2h_source = jinja_env.get_template('e2h.cl').render(mu=mu,
                                                          pmc=pmc,
                                                          common_cl=common_source)
@@ -73,6 +118,9 @@ def create_a(context, shape, mu=False, pec=False, pmc=False):
                                    operation=e2h_source,
                                    arguments=', '.join(ptrs('E', 'H', 'inv_mu') + pmc_arg + des))
 
+    '''
+    Calculate final E (including left preconditioner)
+    '''
     h2e_source = jinja_env.get_template('h2e.cl').render(pec=pec,
                                                          common_cl=common_source)
     H2E_kernel = ElementwiseKernel(context,
@@ -90,7 +138,20 @@ def create_a(context, shape, mu=False, pec=False, pmc=False):
     return spmv
 
 
-def create_xr_step(context):
+def create_xr_step(context: pyopencl.Context) -> operation:
+    """
+    Return a function
+     xr_update(x, p, r, v, alpha, e)
+    which performs the operations
+     x += alpha * p
+     r -= alpha * v
+
+    after waiting for all in the list e
+    and returns a list of pyopencl.Event
+
+    :param context: PyOpenCL context
+    :return: Function for performing x and r updates
+    """
     update_xr_source = '''
     x[i] = add(x[i], mul(alpha, p[i]));
     r[i] = sub(r[i], mul(alpha, v[i]));
@@ -110,13 +171,28 @@ def create_xr_step(context):
     return xr_update
 
 
-def create_rhoerr_step(context):
+def create_rhoerr_step(context: pyopencl.Context) -> operation:
+    """
+    Return a function
+     ri_update(r, e)
+    which performs the operations
+     rho = r * r.conj()
+     err = r * r
+
+    after waiting for all pyopencl.Event in the list e
+    and returns a list of pyopencl.Event
+
+    :param context: PyOpenCL context
+    :return: Function for performing x and r updates
+    """
+
     update_ri_source = '''
     (double3)(r[i].real * r[i].real, \
               r[i].real * r[i].imag, \
               r[i].imag * r[i].imag)
     '''
 
+    # Use a vector type (double3) to make the reduction simpler
     ri_dtype = pyopencl.array.vec.double3
 
     ri_kernel = ReductionKernel(context,
@@ -138,7 +214,19 @@ def create_rhoerr_step(context):
     return ri_update
 
 
-def create_p_step(context):
+def create_p_step(context: pyopencl.Context) -> operation:
+    """
+    Return a function
+     p_update(p, r, beta, e)
+    which performs the operation
+     p = r + beta * p
+
+    after waiting for all pyopencl.Event in the list e
+    and returns a list of pyopencl.Event
+
+    :param context: PyOpenCL context
+    :return: Function for performing the p update
+    """
     update_p_source = '''
     p[i] = add(r[i], mul(beta, p[i]));
     '''
@@ -156,7 +244,16 @@ def create_p_step(context):
     return p_update
 
 
-def create_dot(context):
+def create_dot(context: pyopencl.Context) -> operation:
+    """
+    Return a function for performing the dot product
+     p @ v
+    with the signature
+     dot(p, v, e) -> float
+
+    :param context: PyOpenCL context
+    :return: Function for performing the dot product
+    """
     dot_dtype = numpy.complex128
 
     dot_kernel = ReductionKernel(context,
@@ -168,14 +265,30 @@ def create_dot(context):
                                  reduce_expr='add(a, b)',
                                  arguments=ptrs('p', 'v'))
 
-    def ri_update(p, v, e):
+    def dot(p, v, e):
         g = dot_kernel(p, v, wait_for=e)
         return g.get()
 
-    return ri_update
+    return dot
 
 
-def create_a_csr(context):
+def create_a_csr(context: pyopencl.Context) -> operation:
+    """
+    Return a function for performing the operation
+     (N @ v)
+    where N is stored in CSR (compressed sparse row) format.
+
+    The function signature is
+     spmv(v_out, m, v_in, e)
+    where m is an opencl_fdfd.csr.CSRMatrix
+    and v_out, v_in are (dense) vectors (of type pyopencl.array.Array).
+
+    The function waits on all the pyopencl.Event in e before running, and returns
+     a list of pyopencl.Event.
+
+    :param context: PyOpenCL context
+    :return: Function for sparse (M @ v) operation where M is in CSR format
+    """
     spmv_source = '''
     int start = m_row_ptr[i];
     int stop = m_row_ptr[i+1];

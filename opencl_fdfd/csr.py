@@ -1,9 +1,10 @@
+from typing import List, Dict, Any
+import time
+
 import numpy
 from numpy.linalg import norm
 import pyopencl
 import pyopencl.array
-
-import time
 
 import fdfd_tools.operators
 
@@ -11,17 +12,42 @@ from . import ops
 
 
 class CSRMatrix(object):
+    """
+    Matrix stored in Compressed Sparse Row format, in GPU RAM.
+    """
     row_ptr = None      # type: pyopencl.array.Array
     col_ind = None      # type: pyopencl.array.Array
     data = None         # type: pyopencl.array.Array
 
-    def __init__(self, queue, m):
+    def __init__(self,
+                 queue: pyopencl.CommandQueue,
+                 m: 'scipy.sparse.csr_matrix'):
         self.row_ptr = pyopencl.array.to_device(queue, m.indptr)
         self.col_ind = pyopencl.array.to_device(queue, m.indices)
         self.data = pyopencl.array.to_device(queue, m.data.astype(numpy.complex128))
 
 
-def cg(a, b, max_iters=10000, err_thresh=1e-6, context=None, queue=None, verbose=False):
+def cg(a: 'scipy.sparse.csr_matrix',
+       b: numpy.ndarray,
+       max_iters: int = 10000,
+       err_threshold: float = 1e-6,
+       context: pyopencl.Context = None,
+       queue: pyopencl.CommandQueue = None,
+       verbose: bool = False,
+       ) -> numpy.ndarray:
+    """
+    General conjugate-gradient solver for sparse matrices, where A @ x = b.
+
+    :param a: Matrix to solve (CSR format)
+    :param b: Right-hand side vector (dense ndarray)
+    :param max_iters: Maximum number of iterations
+    :param err_threshold: Error threshold for successful solve, relative to norm(b)
+    :param context: PyOpenCL context. Will be created if not given.
+    :param queue: PyOpenCL command queue. Will be created if not given.
+    :param verbose: Whether to print statistics to screen.
+    :return: Solution vector x; returned even if solve doesn't converge.
+    """
+
     start_time = time.perf_counter()
 
     if context is None:
@@ -43,7 +69,6 @@ def cg(a, b, max_iters=10000, err_thresh=1e-6, context=None, queue=None, verbose
     errs = []
 
     m = CSRMatrix(queue, a)
-
 
     '''
     Generate OpenCL kernels
@@ -77,7 +102,7 @@ def cg(a, b, max_iters=10000, err_thresh=1e-6, context=None, queue=None, verbose
         if verbose:
             print('err', errs[-1])
 
-        if errs[-1] < err_thresh:
+        if errs[-1] < err_threshold:
             success = True
             break
 
@@ -108,7 +133,38 @@ def cg(a, b, max_iters=10000, err_thresh=1e-6, context=None, queue=None, verbose
     return x
 
 
-def cg_solver(omega, dxes, J, epsilon, mu=None, pec=None, pmc=None, adjoint=False, solver_opts=None):
+def cg_solver(omega: complex,
+              dxes: List[List[numpy.ndarray]],
+              J: numpy.ndarray,
+              epsilon: numpy.ndarray,
+              mu: numpy.ndarray = None,
+              pec: numpy.ndarray = None,
+              pmc: numpy.ndarray = None,
+              adjoint: bool = False,
+              solver_opts: Dict[str, Any] = None,
+              ) -> numpy.ndarray:
+    """
+    Conjugate gradient FDFD solver using CSR sparse matrices, mainly for
+     testing and development since it's much slower than the solver in main.py.
+
+    All ndarray arguments should be 1D arrays. To linearize a list of 3 3D ndarrays,
+     either use fdfd_tools.vec() or numpy:
+     f_1D = numpy.hstack(tuple((fi.flatten(order='F') for fi in [f_x, f_y, f_z])))
+
+    :param omega: Complex frequency to solve at.
+    :param dxes: [[dx_e, dy_e, dz_e], [dx_h, dy_h, dz_h]] (complex cell sizes)
+    :param J: Electric current distribution (at E-field locations)
+    :param epsilon: Dielectric constant distribution (at E-field locations)
+    :param mu: Magnetic permeability distribution (at H-field locations)
+    :param pec: Perfect electric conductor distribution
+        (at E-field locations; non-zero value indicates PEC is present)
+    :param pmc: Perfect magnetic conductor distribution
+        (at H-field locations; non-zero value indicates PMC is present)
+    :param adjoint: If true, solves the adjoint problem.
+    :param solver_opts: Passed as kwargs to opencl_fdfd.csr.cg(**solver_opts)
+    :return: E-field which solves the system.
+    """
+
     if solver_opts is None:
         solver_opts = dict()
 

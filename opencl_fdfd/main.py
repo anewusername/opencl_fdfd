@@ -1,17 +1,58 @@
+from typing import List
+import time
+
 import numpy
 from numpy.linalg import norm
 import pyopencl
 import pyopencl.array
 
-import time
-
 import fdfd_tools.operators
 
 from . import ops
 
+__author__ = 'Jan Petykiewicz'
 
-def cg_solver(omega, dxes, J, epsilon, mu=None, pec=None, pmc=None, adjoint=False,
-              max_iters=40000, err_thresh=1e-6, context=None, verbose=False):
+
+def cg_solver(omega: complex,
+              dxes: List[List[numpy.ndarray]],
+              J: numpy.ndarray,
+              epsilon: numpy.ndarray,
+              mu: numpy.ndarray = None,
+              pec: numpy.ndarray = None,
+              pmc: numpy.ndarray = None,
+              adjoint: bool = False,
+              max_iters: int = 40000,
+              err_threshold: float = 1e-6,
+              context: pyopencl.Context = None,
+              verbose: bool = False,
+              ) -> numpy.ndarray:
+    """
+    OpenCL FDFD solver using the iterative conjugate gradient (cg) method
+     and implementing the diagonalized E-field wave operator directly in
+     OpenCL.
+
+    All ndarray arguments should be 1D arrays. To linearize a list of 3 3D ndarrays,
+     either use fdfd_tools.vec() or numpy:
+     f_1D = numpy.hstack(tuple((fi.flatten(order='F') for fi in [f_x, f_y, f_z])))
+
+    :param omega: Complex frequency to solve at.
+    :param dxes: [[dx_e, dy_e, dz_e], [dx_h, dy_h, dz_h]] (complex cell sizes)
+    :param J: Electric current distribution (at E-field locations)
+    :param epsilon: Dielectric constant distribution (at E-field locations)
+    :param mu: Magnetic permeability distribution (at H-field locations)
+    :param pec: Perfect electric conductor distribution
+        (at E-field locations; non-zero value indicates PEC is present)
+    :param pmc: Perfect magnetic conductor distribution
+        (at H-field locations; non-zero value indicates PMC is present)
+    :param adjoint: If true, solves the adjoint problem.
+    :param max_iters: Maximum number of iterations. Default 40,000.
+    :param err_threshold: If (r @ r.conj()) / norm(1j * omega * J) < err_threshold, success.
+        Default 1e-6.
+    :param context: PyOpenCL context to run in. If not given, construct a new context.
+    :param verbose: If True, print progress to stdout. Default False.
+    :return: E-field which solves the system. Returned even if we did not converge.
+    """
+
     start_time = time.perf_counter()
 
     b = -1j * omega * J
@@ -138,7 +179,7 @@ def cg_solver(omega, dxes, J, epsilon, mu=None, pec=None, pmc=None, adjoint=Fals
         if verbose:
             print('err', errs[-1])
 
-        if errs[-1] < err_thresh:
+        if errs[-1] < err_threshold:
             success = True
             break
 
