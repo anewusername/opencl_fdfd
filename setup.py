@@ -13,7 +13,7 @@ setup(name='opencl_fdfd',
             'numpy',
             'pyopencl',
             'jinja2',
-            'fdfd_tools',
+            'fdfd_tools>=0.2',
       ],
       extras_require={
       },
