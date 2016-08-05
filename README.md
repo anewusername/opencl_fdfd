@@ -38,7 +38,7 @@ generalization to multiple GPUs should be pretty straightforward
 * numpy
 * pyopencl
 * jinja2
-* [fdfd_tools](https://mpxd.net/gogs/jan/fdfd_tools)
+* [fdfd_tools](https://mpxd.net/gogs/jan/fdfd_tools) (>=0.2)
 
 
 Install with pip, via git:
