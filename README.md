@@ -19,7 +19,7 @@ Bloch boundary conditions are not included but wouldn't be very hard to add.
 The default solver (opencl_fdfd.cg_solver(...)) located in main.py implements
 the E-field wave operator directly (ie, as a list of OpenCL instructions
 rather than a matrix). Additionally, there is a slower (and slightly more
-versatile) sovler in csr.py which attempts to solve an arbitrary sparse
+versatile) solver in csr.py which attempts to solve an arbitrary sparse
 matrix in compressed sparse row (CSR) format using the same conjugate gradient
 method as the default solver. The CSR solver is significantly slower, but can
 be very useful for testing alternative formulations of the FDFD wave equation.
@@ -29,9 +29,29 @@ generalization to multiple GPUs should be pretty straightforward
 (ie, just copy over edge values during the matrix multiplication step).
 
 
+## Installation
+
 **Dependencies:**
 * python 3 (written and tested with 3.5) 
 * numpy
 * pyopencl
 * jinja2
 * [fdfd_tools](https://mpxd.net/gogs/jan/fdfd_tools)
+
+
+Install with pip, via git:
+```bash
+pip install git+https://mpxd.net/gogs/jan/opencl_fdfd.git@release
+```
+
+
+## Use
+
+See the documentation for opencl_fdfd.cg_solver(...)
+(located in main.py) for details about how to call the solver.
+ 
+An alternate (slower) FDFD solver and a general gpu-based sparse matrix
+solver is available in csr.py . These aren't particularly well-optimized,
+and something like [MAGMA](http://icl.cs.utk.edu/magma/index.html) would
+probably be a better choice if you absolutely need to solve arbitrary
+sparse matrices and can tolerate writing and compiling C/C++ code.

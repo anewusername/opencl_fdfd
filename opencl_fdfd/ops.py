@@ -1,3 +1,12 @@
+"""
+Basic PyOpenCL operations
+
+The functions are mostly concerned with creating and compiling OpenCL
+kernels for use by the other solvers.
+
+See kernels/ for any of the .cl files loaded in this file.
+"""
+
 from typing import List, Callable
 
 import numpy
@@ -7,6 +16,7 @@ import pyopencl
 import pyopencl.array
 from pyopencl.elementwise import ElementwiseKernel
 from pyopencl.reduction import ReductionKernel
+
 
 # Create jinja2 env on module load
 jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, 'kernels'))

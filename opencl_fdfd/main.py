@@ -1,3 +1,11 @@
+"""
+Default FDFD solver
+
+This file holds the default FDFD solver, which uses an E-field wave
+operator implemented directly as OpenCL arithmetic (rather than as
+a matrix).
+"""
+
 from typing import List
 import time
 

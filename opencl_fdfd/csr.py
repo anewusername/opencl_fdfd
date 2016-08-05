@@ -1,3 +1,19 @@
+"""
+Sparse matrix solvers
+
+This file holds the sparse matrix solvers, as well as the
+CSRMatrix sparse matrix representation.
+
+The FDFD solver (fdfd_cg_solver()) solves an FDFD problem by
+creating a sparse matrix representing the problem (using
+fdfd_tools) and then passing it to cg(), which performs a
+conjugate gradient solve.
+
+cg() is capable of solving arbitrary sparse matrices which
+satisfy the constraints for the 'conjugate gradient' algorithm
+(positive definite, symmetric) and some that don't.
+"""
+
 from typing import List, Dict, Any
 import time
 
@@ -133,16 +149,16 @@ def cg(a: 'scipy.sparse.csr_matrix',
     return x
 
 
-def cg_solver(omega: complex,
-              dxes: List[List[numpy.ndarray]],
-              J: numpy.ndarray,
-              epsilon: numpy.ndarray,
-              mu: numpy.ndarray = None,
-              pec: numpy.ndarray = None,
-              pmc: numpy.ndarray = None,
-              adjoint: bool = False,
-              solver_opts: Dict[str, Any] = None,
-              ) -> numpy.ndarray:
+def fdfd_cg_solver(omega: complex,
+                   dxes: List[List[numpy.ndarray]],
+                   J: numpy.ndarray,
+                   epsilon: numpy.ndarray,
+                   mu: numpy.ndarray = None,
+                   pec: numpy.ndarray = None,
+                   pmc: numpy.ndarray = None,
+                   adjoint: bool = False,
+                   solver_opts: Dict[str, Any] = None,
+                   ) -> numpy.ndarray:
     """
     Conjugate gradient FDFD solver using CSR sparse matrices, mainly for
      testing and development since it's much slower than the solver in main.py.

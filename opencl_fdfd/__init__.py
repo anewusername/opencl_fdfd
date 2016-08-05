@@ -19,7 +19,7 @@
   The default solver (opencl_fdfd.cg_solver(...)) located in main.py implements
    the E-field wave operator directly (ie, as a list of OpenCL instructions
    rather than a matrix). Additionally, there is a slower (and slightly more
-   versatile) sovler in csr.py which attempts to solve an arbitrary sparse
+   versatile) solver in csr.py which attempts to solve an arbitrary sparse
    matrix in compressed sparse row (CSR) format using the same conjugate gradient
    method as the default solver. The CSR solver is significantly slower, but can
    be very useful for testing alternative formulations of the FDFD wave equation.
