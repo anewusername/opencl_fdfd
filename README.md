@@ -2,8 +2,9 @@
 
 **opencl_fdfd** is a 3D Finite Difference Frequency Domain (FDFD)
 electromagnetic solver implemented in Python and OpenCL.
-  
-**Capabilities**
+
+
+**Capabilities:**
 * Arbitrary distributions of the following:
     * Dielectric constant (```epsilon```)
     * Magnetic permeabilty (```mu```)
