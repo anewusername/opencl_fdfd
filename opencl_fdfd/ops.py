@@ -302,7 +302,7 @@ def create_a_csr(context: pyopencl.Context) -> operation:
     spmv_source = '''
     int start = m_row_ptr[i];
     int stop = m_row_ptr[i+1];
-    dtype dot = zero;
+    ctype dot = zero;
 
     int col_ind, d_ind;
     for (int j=start; j<stop; j++) {
