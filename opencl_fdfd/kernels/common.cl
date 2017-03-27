@@ -9,7 +9,7 @@ const int sx = {{shape[0]}};
 const int sy = {{shape[1]}};
 const int sz = {{shape[2]}};
 
-//Since we use i to index into Ex[], E[], ... rather than E[], do nothing if
+//Since we use i to index into Ex[], Ey[], ... rather than E[], do nothing if
 // i is outside the bounds of Ex[].
 if (i >= sx * sy * sz) {
     PYOPENCL_ELWISE_CONTINUE;
@@ -18,15 +18,15 @@ if (i >= sx * sy * sz) {
 // Given a linear index i and shape (sx, sy, sz), defines x, y, and z
 //  as the 3D indices of the current element (i).
 // (ie, converts linear index [i] to field indices (x, y, z)
-const int z = i / (sx * sy);
-const int y = (i - z * sx * sy) / sx;
-const int x = (i - y * sx - z * sx * sy);
+const int x = i / (sz * sy);
+const int y = (i - x * sz * sy) / sz;
+const int z = (i - y * sz - x * sz * sy);
 
 // Calculate linear index offsets corresponding to offsets in 3D
 // (ie, if E[i] <-> E(x, y, z), then E[i + diy] <-> E(x, y + 1, z)
-const int dix = 1;
-const int diy = sx;
-const int diz = sx * sy;
+const int dix = sz * sy;
+const int diy = sz;
+const int diz = 1;
 
 //Pointer offsets into the components of a linearized vector-field
 // (eg. Hx = H + XX, where H and Hx are pointers)
