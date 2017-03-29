@@ -1,8 +1,10 @@
+{#
 /* Common code for E, H updates
  *
  * Template parameters:
  *  shape       list of 3 ints specifying shape of fields
  */
+#}
 
 /*
  * Field size info
