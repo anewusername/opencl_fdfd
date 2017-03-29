@@ -19,6 +19,8 @@
 
 {{common_cl}}
 
+////////////////////////////////////////////////////////////////////////////
+
 __global ctype *inv_mu_x = inv_mu + XX;
 __global ctype *inv_mu_y = inv_mu + YY;
 __global ctype *inv_mu_z = inv_mu + ZZ;
@@ -26,32 +28,6 @@ __global ctype *inv_mu_z = inv_mu + ZZ;
 __global char *pmc_x = pmc + XX;
 __global char *pmc_y = pmc + YY;
 __global char *pmc_z = pmc + ZZ;
-
-/*
- * Implement periodic boundary conditions
- *
- * ipx gives the index of the adjacent cell in the plus-x direction ([i]ndex [p]lus [x]).
- * In the event that we start at x == (sx - 1), we actually want to wrap around and grab the cell
- * where x == 0 instead, ie. ipx = i - (sx - 1) * dix .
- */
-int ipx, ipy, ipz;
-if ( x == sx - 1 ) {
-  ipx = i - (sx - 1) * dix;
-} else {
-  ipx = i + dix;
-}
-
-if ( y == sy - 1 ) {
-  ipy = i - (sy - 1) * diy;
-} else {
-  ipy = i + diy;
-}
-
-if ( z == sz - 1 ) {
-  ipz = i - (sz - 1) * diz;
-} else {
-  ipz = i + diz;
-}
 
 
 //Update H components; set them to 0 if PMC is enabled at that location.
@@ -62,8 +38,8 @@ if (pmc_x[i] != 0) {
 } else
 {%- endif -%}
 {
-    ctype Dzy = mul(sub(Ez[ipy], Ez[i]), inv_dey[y]);
-    ctype Dyz = mul(sub(Ey[ipz], Ey[i]), inv_dez[z]);
+    ctype Dzy = mul(sub(Ez[i + py], Ez[i]), inv_dey[y]);
+    ctype Dyz = mul(sub(Ey[i + pz], Ey[i]), inv_dez[z]);
     ctype x_curl = sub(Dzy, Dyz);
 
     {%- if mu -%}
@@ -79,8 +55,8 @@ if (pmc_y[i] != 0) {
 } else
 {%- endif -%}
 {
-    ctype Dxz = mul(sub(Ex[ipz], Ex[i]), inv_dez[z]);
-    ctype Dzx = mul(sub(Ez[ipx], Ez[i]), inv_dex[x]);
+    ctype Dxz = mul(sub(Ex[i + pz], Ex[i]), inv_dez[z]);
+    ctype Dzx = mul(sub(Ez[i + px], Ez[i]), inv_dex[x]);
     ctype y_curl = sub(Dxz, Dzx);
 
     {%- if mu -%}
@@ -96,8 +72,8 @@ if (pmc_z[i] != 0) {
 } else
 {%- endif -%}
 {
-    ctype Dyx = mul(sub(Ey[ipx], Ey[i]), inv_dex[x]);
-    ctype Dxy = mul(sub(Ex[ipy], Ex[i]), inv_dey[y]);
+    ctype Dyx = mul(sub(Ey[i + px], Ey[i]), inv_dex[x]);
+    ctype Dxy = mul(sub(Ex[i + py], Ex[i]), inv_dey[y]);
     ctype z_curl = sub(Dyx, Dxy);
 
     {%- if mu -%}

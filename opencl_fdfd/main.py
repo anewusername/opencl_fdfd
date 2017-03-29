@@ -113,7 +113,7 @@ def cg_solver(omega: complex,
         Allocate GPU memory and load in data
     '''
     if context is None:
-        context = pyopencl.create_some_context(False)
+        context = pyopencl.create_some_context(interactive=True)
 
     queue = pyopencl.CommandQueue(context)
 
