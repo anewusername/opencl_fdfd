@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='opencl_fdfd',
-      version='0.2',
+      version='0.3',
       description='Opencl FDFD solver',
       author='Jan Petykiewicz',
       author_email='anewusername@gmail.com',
@@ -13,7 +13,7 @@ setup(name='opencl_fdfd',
             'numpy',
             'pyopencl',
             'jinja2',
-            'fdfd_tools>=0.2',
+            'fdfd_tools>=0.3',
       ],
       extras_require={
       },
