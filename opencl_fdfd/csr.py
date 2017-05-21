@@ -16,6 +16,7 @@ satisfy the constraints for the 'conjugate gradient' algorithm
 
 from typing import Dict, Any
 import time
+import logging
 
 import numpy
 from numpy.linalg import norm
@@ -25,6 +26,11 @@ import pyopencl.array
 import fdfd_tools.solvers
 
 from . import ops
+
+
+__author__ = 'Jan Petykiewicz'
+
+logger = logging.getLogger(__name__)
 
 
 class CSRMatrix(object):
@@ -49,7 +55,6 @@ def cg(A: 'scipy.sparse.csr_matrix',
        err_threshold: float = 1e-6,
        context: pyopencl.Context = None,
        queue: pyopencl.CommandQueue = None,
-       verbose: bool = False,
        ) -> numpy.ndarray:
     """
     General conjugate-gradient solver for sparse matrices, where A @ x = b.
@@ -60,7 +65,6 @@ def cg(A: 'scipy.sparse.csr_matrix',
     :param err_threshold: Error threshold for successful solve, relative to norm(b)
     :param context: PyOpenCL context. Will be created if not given.
     :param queue: PyOpenCL command queue. Will be created if not given.
-    :param verbose: Whether to print statistics to screen.
     :return: Solution vector x; returned even if solve doesn't converge.
     """
 
@@ -102,13 +106,11 @@ def cg(A: 'scipy.sparse.csr_matrix',
 
     _, err2 = rhoerr_step(r, [])
     b_norm = numpy.sqrt(err2)
-    if verbose:
-        print('b_norm check: ', b_norm)
+    logging.debug('b_norm check: ', b_norm)
 
     success = False
     for k in range(max_iters):
-        if verbose:
-            print('[{:06d}] rho {:.4} alpha {:4.4}'.format(k, rho, alpha), end=' ')
+        logging.debug('[{:06d}] rho {:.4} alpha {:4.4}'.format(k, rho, alpha))
 
         rho_prev = rho
         e = xr_step(x, p, r, v, alpha, [])
@@ -116,8 +118,7 @@ def cg(A: 'scipy.sparse.csr_matrix',
 
         errs += [numpy.sqrt(err2) / b_norm]
 
-        if verbose:
-            print('err', errs[-1])
+        logging.debug('err {}'.format(errs[-1]))
 
         if errs[-1] < err_threshold:
             success = True
@@ -128,7 +129,7 @@ def cg(A: 'scipy.sparse.csr_matrix',
         alpha = rho / dot(p, v, e)
 
         if verbose and k % 1000 == 0:
-            print(k)
+            logging.info('iteration {}'.format(k))
 
     '''
     Done solving
@@ -137,17 +138,16 @@ def cg(A: 'scipy.sparse.csr_matrix',
 
     x = x.get()
 
-    if verbose:
-        if success:
-            print('Success', end='')
-        else:
-            print('Failure', end=', ')
-        print(', {} iterations in {} sec: {} iterations/sec \
-                      '.format(k, time_elapsed, k / time_elapsed))
-        print('final error', errs[-1])
-        print('overhead {} sec'.format(start_time2 - start_time))
+    if success:
+        logging.info('Solve success')
+    else:
+        logging.warning('Solve failure')
+    logging.info('{} iterations in {} sec: {} iterations/sec \
+                  '.format(k, time_elapsed, k / time_elapsed))
+    logging.debug('final error {}'.format(errs[-1]))
+    logging.debug('overhead {} sec'.format(start_time2 - start_time))
 
-        print('Final residual:', norm(A @ x - b) / norm(b))
+    logging.info('Final residual: {}'.format(norm(A @ x - b) / norm(b)))
     return x
 
 

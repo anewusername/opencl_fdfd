@@ -8,6 +8,7 @@ See kernels/ for any of the .cl files loaded in this file.
 """
 
 from typing import List, Callable
+import logging
 
 import numpy
 import jinja2
@@ -17,6 +18,8 @@ import pyopencl.array
 from pyopencl.elementwise import ElementwiseKernel
 from pyopencl.reduction import ReductionKernel
 
+
+logger = logging.getLogger(__name__)
 
 # Create jinja2 env on module load
 jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, 'kernels'))
@@ -144,6 +147,11 @@ def create_a(context: pyopencl.Context,
         e2 = E2H_kernel(E, H, inv_mu, pmc, *idxes[0], wait_for=[e2])
         e2 = H2E_kernel(E, H, oeps, Pl, pec, *idxes[1], wait_for=[e2])
         return [e2]
+
+    logger.debug('Preamble: \n{}'.format(preamble))
+    logger.debug('p2e: \n{}'.format(p2e_source))
+    logger.debug('e2h: \n{}'.format(e2h_source))
+    logger.debug('h2e: \n{}'.format(h2e_source))
 
     return spmv
 

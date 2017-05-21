@@ -8,6 +8,7 @@ a matrix).
 
 from typing import List
 import time
+import logging
 
 import numpy
 from numpy.linalg import norm
@@ -18,7 +19,10 @@ import fdfd_tools.operators
 
 from . import ops
 
+
 __author__ = 'Jan Petykiewicz'
+
+logger = logging.getLogger(__name__)
 
 
 def cg_solver(omega: complex,
@@ -32,7 +36,6 @@ def cg_solver(omega: complex,
               max_iters: int = 40000,
               err_threshold: float = 1e-6,
               context: pyopencl.Context = None,
-              verbose: bool = False,
               ) -> numpy.ndarray:
     """
     OpenCL FDFD solver using the iterative conjugate gradient (cg) method
@@ -57,7 +60,6 @@ def cg_solver(omega: complex,
     :param err_threshold: If (r @ r.conj()) / norm(1j * omega * J) < err_threshold, success.
         Default 1e-6.
     :param context: PyOpenCL context to run in. If not given, construct a new context.
-    :param verbose: If True, print progress to stdout. Default False.
     :return: E-field which solves the system. Returned even if we did not converge.
     """
 
@@ -171,12 +173,13 @@ def cg_solver(omega: complex,
 
     _, err2 = rhoerr_step(r, [])
     b_norm = numpy.sqrt(err2)
-    print('b_norm check: ', b_norm)
+    logging.debug('b_norm check: {}'.format(b_norm))
 
     success = False
     for k in range(max_iters):
-        if verbose:
-            print('[{:06d}] rho {:.4} alpha {:4.4}'.format(k, rho, alpha), end=' ')
+        do_print = (k % 100 == 0)
+        if do_print:
+            logger.debug('[{:06d}] rho {:.4} alpha {:4.4}'.format(k, rho, alpha))
 
         rho_prev = rho
         e = xr_step(x, p, r, v, alpha, [])
@@ -184,8 +187,8 @@ def cg_solver(omega: complex,
 
         errs += [numpy.sqrt(err2) / b_norm]
 
-        if verbose:
-            print('err', errs[-1])
+        if do_print:
+            logger.debug('err {}'.format(errs[-1]))
 
         if errs[-1] < err_threshold:
             success = True
@@ -196,7 +199,7 @@ def cg_solver(omega: complex,
         alpha = rho / dot(p, v, e)
 
         if k % 1000 == 0:
-            print(k)
+            logger.info('iteration {}'.format(k))
 
     '''
     Done solving
@@ -210,18 +213,18 @@ def cg_solver(omega: complex,
         x = (Pr * x).get()
 
     if success:
-        print('Success', end='')
+        logger.info('Solve success')
     else:
-        print('Failure', end=', ')
-    print(', {} iterations in {} sec: {} iterations/sec \
+        logger.warning('Solve failure')
+    logger.info('{} iterations in {} sec: {} iterations/sec \
                   '.format(k, time_elapsed, k / time_elapsed))
-    print('final error', errs[-1])
-    print('overhead {} sec'.format(start_time2 - start_time))
+    logger.debug('final error {}'.format(errs[-1]))
+    logger.debug('overhead {} sec'.format(start_time2 - start_time))
 
     A0 = fdfd_tools.operators.e_full(omega, dxes, epsilon, mu).tocsr()
     if adjoint:
         # Remember we conjugated all the contents of A earlier
         A0 = A0.T
-    print('Post-everything residual:', norm(A0 @ x - b) / norm(b))
+    logger.info('Post-everything residual: {}'.format(norm(A0 @ x - b) / norm(b)))
     return x
 
