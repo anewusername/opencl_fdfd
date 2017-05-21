@@ -31,7 +31,7 @@ __global char *pmc_z = pmc + ZZ;
 
 
 //Update H components; set them to 0 if PMC is enabled at that location.
-//Mu division and PMC conditional are only included if {{mu}} and {{pmc}} are true
+//Mu division and PMC conditional are only included if {mu} and {pmc} are true
 {% if pmc -%}
 if (pmc_x[i] != 0) {
     Hx[i] = zero;
@@ -42,9 +42,9 @@ if (pmc_x[i] != 0) {
     ctype Dyz = mul(sub(Ey[i + pz], Ey[i]), inv_dez[z]);
     ctype x_curl = sub(Dzy, Dyz);
 
-    {%- if mu -%}
+    {%- if mu %}
     Hx[i] = mul(inv_mu_x[i], x_curl);
-    {%- else -%}
+    {%- else %}
     Hx[i] = x_curl;
     {%- endif %}
 }
@@ -59,9 +59,9 @@ if (pmc_y[i] != 0) {
     ctype Dzx = mul(sub(Ez[i + px], Ez[i]), inv_dex[x]);
     ctype y_curl = sub(Dxz, Dzx);
 
-    {%- if mu -%}
+    {%- if mu %}
     Hy[i] = mul(inv_mu_y[i], y_curl);
-    {%- else -%}
+    {%- else %}
     Hy[i] = y_curl;
     {%- endif %}
 }
@@ -76,9 +76,9 @@ if (pmc_z[i] != 0) {
     ctype Dxy = mul(sub(Ex[i + py], Ex[i]), inv_dey[y]);
     ctype z_curl = sub(Dyx, Dxy);
 
-    {%- if mu -%}
+    {%- if mu %}
     Hz[i] = mul(inv_mu_z[i], z_curl);
-    {%- else -%}
+    {%- else %}
     Hz[i] = z_curl;
     {%- endif %}
 }
