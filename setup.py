@@ -4,11 +4,14 @@ from setuptools import setup, find_packages
 
 setup(name='opencl_fdfd',
       version='0.3',
-      description='Opencl FDFD solver',
+      description='OpenCL FDFD solver',
       author='Jan Petykiewicz',
       author_email='anewusername@gmail.com',
       url='https://mpxd.net/gogs/jan/opencl_fdfd',
       packages=find_packages(),
+      package_data={
+          'opencl_fdfd': ['kernels/*']
+      },
       install_requires=[
             'numpy',
             'pyopencl',
