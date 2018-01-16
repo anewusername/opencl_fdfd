@@ -31,7 +31,7 @@
 
 
   Dependencies:
-    - fdfd_tools    ( https://mpxd.net/gogs/jan/fdfd_tools )
+    - fdfd_tools    ( https://mpxd.net/code/jan/fdfd_tools )
     - numpy
     - pyopencl
     - jinja2
