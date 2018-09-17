@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
+import opencl_fdfd
 
 setup(name='opencl_fdfd',
-      version='0.3',
+      version=opencl_fdfd.version,
       description='OpenCL FDFD solver',
       author='Jan Petykiewicz',
       author_email='anewusername@gmail.com',
