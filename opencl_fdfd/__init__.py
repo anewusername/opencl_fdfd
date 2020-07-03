@@ -31,7 +31,7 @@
 
 
   Dependencies:
-    - fdfd_tools    ( https://mpxd.net/code/jan/fdfd_tools )
+    - meanas    ( https://mpxd.net/code/jan/meanas )
     - numpy
     - pyopencl
     - jinja2

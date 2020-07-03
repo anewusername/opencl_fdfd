@@ -34,11 +34,11 @@ generalization to multiple GPUs should be pretty straightforward
 ## Installation
 
 **Dependencies:**
-* python 3 (written and tested with 3.5) 
+* python 3 (written and tested with 3.7)
 * numpy
 * pyopencl
 * jinja2
-* [fdfd_tools](https://mpxd.net/code/jan/fdfd_tools) (>=0.2)
+* [meanas](https://mpxd.net/code/jan/meanas) (>=0.5)
 
 
 Install with pip, via git:

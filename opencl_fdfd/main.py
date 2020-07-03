@@ -15,7 +15,7 @@ from numpy.linalg import norm
 import pyopencl
 import pyopencl.array
 
-import fdfd_tools.operators
+import meanas.fdfd.operators
 
 from . import ops
 
@@ -43,7 +43,7 @@ def cg_solver(omega: complex,
      OpenCL.
 
     All ndarray arguments should be 1D arrays. To linearize a list of 3 3D ndarrays,
-     either use fdfd_tools.vec() or numpy:
+     either use meanas.vec() or numpy:
      f_1D = numpy.hstack(tuple((fi.flatten(order='F') for fi in [f_x, f_y, f_z])))
 
     :param omega: Complex frequency to solve at.
@@ -104,7 +104,7 @@ def cg_solver(omega: complex,
         if mu is not None:
             mu = numpy.conj(mu)
 
-    L, R = fdfd_tools.operators.e_full_preconditioners(dxes)
+    L, R = meanas.fdfd.operators.e_full_preconditioners(dxes)
 
     if adjoint:
         b_preconditioned = R @ b
@@ -221,7 +221,7 @@ def cg_solver(omega: complex,
     logger.debug('final error {}'.format(errs[-1]))
     logger.debug('overhead {} sec'.format(start_time2 - start_time))
 
-    A0 = fdfd_tools.operators.e_full(omega, dxes, epsilon, mu).tocsr()
+    A0 = meanas.fdfd.operators.e_full(omega, dxes, epsilon, mu).tocsr()
     if adjoint:
         # Remember we conjugated all the contents of A earlier
         A0 = A0.T
