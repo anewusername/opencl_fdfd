@@ -6,7 +6,7 @@ CSRMatrix sparse matrix representation.
 
 The FDFD solver (fdfd_cg_solver()) solves an FDFD problem by
 creating a sparse matrix representing the problem (using
-fdfd_tools) and then passing it to cg(), which performs a
+meanas) and then passing it to cg(), which performs a
 conjugate gradient solve.
 
 cg() is capable of solving arbitrary sparse matrices which
@@ -23,7 +23,7 @@ from numpy.linalg import norm
 import pyopencl
 import pyopencl.array
 
-import fdfd_tools.solvers
+import meanas.fdfd.solvers
 
 from . import ops
 
@@ -158,9 +158,9 @@ def fdfd_cg_solver(solver_opts: Dict[str, Any] = None,
     Conjugate gradient FDFD solver using CSR sparse matrices, mainly for
      testing and development since it's much slower than the solver in main.py.
 
-    Calls fdfd_tools.solvers.generic(**fdfd_args,
-                                     matrix_solver=opencl_fdfd.csr.cg,
-                                     matrix_solver_opts=solver_opts)
+    Calls meanas.fdfd.solvers.generic(**fdfd_args,
+                                      matrix_solver=opencl_fdfd.csr.cg,
+                                      matrix_solver_opts=solver_opts)
 
     :param solver_opts: Passed as matrix_solver_opts to fdfd_tools.solver.generic(...).
         Default {}.
@@ -172,8 +172,8 @@ def fdfd_cg_solver(solver_opts: Dict[str, Any] = None,
     if solver_opts is None:
         solver_opts = dict()
 
-    x = fdfd_tools.solvers.generic(matrix_solver=cg,
-                                   matrix_solver_opts=solver_opts,
-                                   **fdfd_args)
+    x = meanas.fdfd.solvers.generic(matrix_solver=cg,
+                                    matrix_solver_opts=solver_opts,
+                                    **fdfd_args)
 
     return x
