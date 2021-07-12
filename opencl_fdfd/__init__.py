@@ -41,4 +41,5 @@ from .main import cg_solver
 
 __author__ = 'Jan Petykiewicz'
 
-version = '0.3'
+from .VERSION import __version__
+version = __version__

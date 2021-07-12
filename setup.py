@@ -5,8 +5,11 @@ from setuptools import setup, find_packages
 with open('README.md', 'r') as f:
     long_description = f.read()
 
+with open('opencl_fdfd/VERSION.py', 'rt') as f:
+    version = f.readlines()[2].strip()
+
 setup(name='opencl_fdfd',
-      version='0.3',
+      version=version,
       description='OpenCL FDFD solver',
       long_description=long_description,
       long_description_content_type='text/markdown',
