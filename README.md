@@ -54,7 +54,7 @@ See the documentation for `opencl_fdfd.cg_solver(...)`
 The FDFD arguments are identical to those in
 `meanas.solvers.generic(...)`, and a few solver-specific
 arguments are available.
- 
+
 An alternate (slower) FDFD solver and a general gpu-based sparse matrix
 solver is available in `csr.py`. These aren't particularly
 well-optimized, and something like
