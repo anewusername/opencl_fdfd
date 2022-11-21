@@ -6,11 +6,12 @@ operator implemented directly as OpenCL arithmetic (rather than as
 a matrix).
 """
 
-from typing import List
+from typing import List, Optional, cast
 import time
 import logging
 
 import numpy
+from numpy.typing import NDArray, ArrayLike
 from numpy.linalg import norm
 import pyopencl
 import pyopencl.array
@@ -25,18 +26,19 @@ __author__ = 'Jan Petykiewicz'
 logger = logging.getLogger(__name__)
 
 
-def cg_solver(omega: complex,
-              dxes: List[List[numpy.ndarray]],
-              J: numpy.ndarray,
-              epsilon: numpy.ndarray,
-              mu: numpy.ndarray = None,
-              pec: numpy.ndarray = None,
-              pmc: numpy.ndarray = None,
-              adjoint: bool = False,
-              max_iters: int = 40000,
-              err_threshold: float = 1e-6,
-              context: pyopencl.Context = None,
-              ) -> numpy.ndarray:
+def cg_solver(
+        omega: complex,
+        dxes: List[List[NDArray]],
+        J: ArrayLike,
+        epsilon: ArrayLike,
+        mu: Optional[ArrayLike] = None,
+        pec: Optional[ArrayLike] = None,
+        pmc: Optional[ArrayLike] = None,
+        adjoint: bool = False,
+        max_iters: int = 40000,
+        err_threshold: float = 1e-6,
+        context: Optional[pyopencl.Context] = None,
+        ) -> NDArray:
     """
     OpenCL FDFD solver using the iterative conjugate gradient (cg) method
      and implementing the diagonalized E-field wave operator directly in
@@ -46,28 +48,30 @@ def cg_solver(omega: complex,
      either use meanas.fdmath.vec() or numpy:
      f_1D = numpy.hstack(tuple((fi.flatten(order='F') for fi in [f_x, f_y, f_z])))
 
-    :param omega: Complex frequency to solve at.
-    :param dxes: [[dx_e, dy_e, dz_e], [dx_h, dy_h, dz_h]] (complex cell sizes)
-    :param J: Electric current distribution (at E-field locations)
-    :param epsilon: Dielectric constant distribution (at E-field locations)
-    :param mu: Magnetic permeability distribution (at H-field locations)
-    :param pec: Perfect electric conductor distribution
-        (at E-field locations; non-zero value indicates PEC is present)
-    :param pmc: Perfect magnetic conductor distribution
-        (at H-field locations; non-zero value indicates PMC is present)
-    :param adjoint: If true, solves the adjoint problem.
-    :param max_iters: Maximum number of iterations. Default 40,000.
-    :param err_threshold: If (r @ r.conj()) / norm(1j * omega * J) < err_threshold, success.
-        Default 1e-6.
-    :param context: PyOpenCL context to run in. If not given, construct a new context.
-    :return: E-field which solves the system. Returned even if we did not converge.
-    """
+    Args:
+        omega: Complex frequency to solve at.
+        dxes: [[dx_e, dy_e, dz_e], [dx_h, dy_h, dz_h]] (complex cell sizes)
+        J: Electric current distribution (at E-field locations)
+        epsilon: Dielectric constant distribution (at E-field locations)
+        mu: Magnetic permeability distribution (at H-field locations)
+        pec: Perfect electric conductor distribution
+            (at E-field locations; non-zero value indicates PEC is present)
+        pmc: Perfect magnetic conductor distribution
+            (at H-field locations; non-zero value indicates PMC is present)
+        adjoint: If true, solves the adjoint problem.
+        max_iters: Maximum number of iterations. Default 40,000.
+        err_threshold: If (r @ r.conj()) / norm(1j * omega * J) < err_threshold, success.
+            Default 1e-6.
+        context: PyOpenCL context to run in. If not given, construct a new context.
 
+    Returns:
+        E-field which solves the system. Returned even if we did not converge.
+    """
     start_time = time.perf_counter()
 
-    b = -1j * omega * J
+    shape = [dd.size for dd in dxes[0]]
 
-    shape = [d.size for d in dxes[0]]
+    b = -1j * omega * numpy.array(J, copy=False)
 
     '''
         ** In this comment, I use the following notation:
@@ -96,9 +100,10 @@ def cg_solver(omega: complex,
         We can accomplish all this simply by conjugating everything (except J) and
          reversing the order of L and R
     '''
+    epsilon = numpy.array(epsilon, copy=False)
     if adjoint:
         # Conjugate everything
-        dxes = [[numpy.conj(d) for d in dd] for dd in dxes]
+        dxes = [[numpy.conj(dd) for dd in dds] for dds in dxes]
         omega = numpy.conj(omega)
         epsilon = numpy.conj(epsilon)
         if mu is not None:
@@ -132,7 +137,7 @@ def cg_solver(omega: complex,
     rho = 1.0 + 0j
     errs = []
 
-    inv_dxes = [[load_field(1 / d) for d in dd] for dd in dxes]
+    inv_dxes = [[load_field(1 / numpy.array(dd, copy=False)) for dd in dds] for dds in dxes]
     oeps = load_field(-omega ** 2 * epsilon)
     Pl = load_field(L.diagonal())
     Pr = load_field(R.diagonal())
@@ -140,17 +145,18 @@ def cg_solver(omega: complex,
     if mu is None:
         invm = load_field(numpy.array([]))
     else:
-        invm = load_field(1 / mu)
+        invm = load_field(1 / numpy.array(mu, copy=False))
+        mu = numpy.array(mu, copy=False)
 
     if pec is None:
         gpec = load_field(numpy.array([]), dtype=numpy.int8)
     else:
-        gpec = load_field(pec.astype(bool), dtype=numpy.int8)
+        gpec = load_field(numpy.array(pec, dtype=bool, copy=False), dtype=numpy.int8)
 
     if pmc is None:
         gpmc = load_field(numpy.array([]), dtype=numpy.int8)
     else:
-        gpmc = load_field(pmc.astype(bool), dtype=numpy.int8)
+        gpmc = load_field(numpy.array(pmc, dtype=bool, copy=False), dtype=numpy.int8)
 
     '''
     Generate OpenCL kernels

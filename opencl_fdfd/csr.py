@@ -14,14 +14,16 @@ satisfy the constraints for the 'conjugate gradient' algorithm
 (positive definite, symmetric) and some that don't.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import time
 import logging
 
 import numpy
+from numpy.typing import NDArray, ArrayLike
 from numpy.linalg import norm
 import pyopencl
 import pyopencl.array
+import scipy
 
 import meanas.fdfd.solvers
 
@@ -33,39 +35,45 @@ __author__ = 'Jan Petykiewicz'
 logger = logging.getLogger(__name__)
 
 
-class CSRMatrix(object):
+class CSRMatrix:
     """
     Matrix stored in Compressed Sparse Row format, in GPU RAM.
     """
-    row_ptr = None      # type: pyopencl.array.Array
-    col_ind = None      # type: pyopencl.array.Array
-    data = None         # type: pyopencl.array.Array
+    row_ptr: pyopencl.array.Array
+    col_ind: pyopencl.array.Array
+    data: pyopencl.array.Array
 
-    def __init__(self,
-                 queue: pyopencl.CommandQueue,
-                 m: 'scipy.sparse.csr_matrix'):
+    def __init__(
+            self,
+            queue: pyopencl.CommandQueue,
+            m: 'scipy.sparse.csr_matrix',
+            ) -> None:
         self.row_ptr = pyopencl.array.to_device(queue, m.indptr)
         self.col_ind = pyopencl.array.to_device(queue, m.indices)
         self.data = pyopencl.array.to_device(queue, m.data.astype(numpy.complex128))
 
 
-def cg(A: 'scipy.sparse.csr_matrix',
-       b: numpy.ndarray,
-       max_iters: int = 10000,
-       err_threshold: float = 1e-6,
-       context: pyopencl.Context = None,
-       queue: pyopencl.CommandQueue = None,
-       ) -> numpy.ndarray:
+def cg(
+        A: 'scipy.sparse.csr_matrix',
+        b: ArrayLike,
+        max_iters: int = 10000,
+        err_threshold: float = 1e-6,
+        context: Optional[pyopencl.Context] = None,
+        queue: Optional[pyopencl.CommandQueue] = None,
+        ) -> NDArray:
     """
     General conjugate-gradient solver for sparse matrices, where A @ x = b.
 
-    :param A: Matrix to solve (CSR format)
-    :param b: Right-hand side vector (dense ndarray)
-    :param max_iters: Maximum number of iterations
-    :param err_threshold: Error threshold for successful solve, relative to norm(b)
-    :param context: PyOpenCL context. Will be created if not given.
-    :param queue: PyOpenCL command queue. Will be created if not given.
-    :return: Solution vector x; returned even if solve doesn't converge.
+    Args:
+        A: Matrix to solve (CSR format)
+        b: Right-hand side vector (dense ndarray)
+        max_iters: Maximum number of iterations
+        err_threshold: Error threshold for successful solve, relative to norm(b)
+        context: PyOpenCL context. Will be created if not given.
+        queue: PyOpenCL command queue. Will be created if not given.
+
+    Returns:
+        Solution vector x; returned even if solve doesn't converge.
     """
 
     start_time = time.perf_counter()
@@ -151,29 +159,37 @@ def cg(A: 'scipy.sparse.csr_matrix',
     return x
 
 
-def fdfd_cg_solver(solver_opts: Dict[str, Any] = None,
-                   **fdfd_args
-                   ) -> numpy.ndarray:
+def fdfd_cg_solver(
+        solver_opts: Optional[Dict[str, Any]] = None,
+        **fdfd_args
+        ) -> NDArray:
     """
     Conjugate gradient FDFD solver using CSR sparse matrices, mainly for
      testing and development since it's much slower than the solver in main.py.
 
-    Calls meanas.fdfd.solvers.generic(**fdfd_args,
-                                      matrix_solver=opencl_fdfd.csr.cg,
-                                      matrix_solver_opts=solver_opts)
+    Calls meanas.fdfd.solvers.generic(
+        **fdfd_args,
+        matrix_solver=opencl_fdfd.csr.cg,
+        matrix_solver_opts=solver_opts,
+        )
 
-    :param solver_opts: Passed as matrix_solver_opts to fdfd_tools.solver.generic(...).
-        Default {}.
-    :param fdfd_args: Passed as **fdfd_args to fdfd_tools.solver.generic(...).
-        Should include all of the arguments **except** matrix_solver and matrix_solver_opts
-    :return: E-field which solves the system.
+    Args:
+        solver_opts: Passed as matrix_solver_opts to fdfd_tools.solver.generic(...).
+            Default {}.
+        fdfd_args: Passed as **fdfd_args to fdfd_tools.solver.generic(...).
+            Should include all of the arguments **except** matrix_solver and matrix_solver_opts
+
+    Returns:
+        E-field which solves the system.
     """
 
     if solver_opts is None:
         solver_opts = dict()
 
-    x = meanas.fdfd.solvers.generic(matrix_solver=cg,
-                                    matrix_solver_opts=solver_opts,
-                                    **fdfd_args)
+    x = meanas.fdfd.solvers.generic(
+        matrix_solver=cg,
+        matrix_solver_opts=solver_opts,
+        **fdfd_args,
+        )
 
     return x
