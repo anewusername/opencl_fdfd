@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "opencl_fdfd"
+description = "OpenCL FDFD solver"
+readme = "README.md"
+license = { file = "LICENSE.md" }
+authors = [
+    { name="Jan Petykiewicz", email="jan@mpxd.net" },
+    ]
+homepage = "https://mpxd.net/code/jan/opencl_fdfd"
+repository = "https://mpxd.net/code/jan/opencl_fdfd"
+keywords = [
+    "FDFD",
+    "finite",
+    "difference",
+    "frequency",
+    "domain",
+    "simulation",
+    "optics",
+    "electromagnetic",
+    "dielectric",
+    "PML",
+    "solver",
+    "FDTD",
+    ]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Manufacturing",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Topic :: Scientific/Engineering",
+    ]
+requires-python = ">=3.8"
+dynamic = ["version"]
+dependencies = [
+    "numpy~=1.21",
+    "pyopencl",
+    "jinja2",
+    "meanas>=0.5",
+    ]
+
+[tool.hatch.version]
+path = "opencl_fdfd/__init__.py"

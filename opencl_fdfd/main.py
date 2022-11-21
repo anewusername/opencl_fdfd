@@ -43,7 +43,7 @@ def cg_solver(omega: complex,
      OpenCL.
 
     All ndarray arguments should be 1D arrays. To linearize a list of 3 3D ndarrays,
-     either use meanas.vec() or numpy:
+     either use meanas.fdmath.vec() or numpy:
      f_1D = numpy.hstack(tuple((fi.flatten(order='F') for fi in [f_x, f_y, f_z])))
 
     :param omega: Complex frequency to solve at.
