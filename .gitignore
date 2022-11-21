@@ -60,3 +60,6 @@ target/
 
 # PyCharm
 .idea/
+
+.mypy_cache/
+.pytest_cache/
