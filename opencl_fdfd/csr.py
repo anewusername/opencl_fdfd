@@ -114,11 +114,11 @@ def cg(
 
     _, err2 = rhoerr_step(r, [])
     b_norm = numpy.sqrt(err2)
-    logging.debug('b_norm check: ', b_norm)
+    logging.debug(f'b_norm check: {b_norm}')
 
     success = False
     for k in range(max_iters):
-        logging.debug('[{:06d}] rho {:.4} alpha {:4.4}'.format(k, rho, alpha))
+        logging.debug(f'[{k:06d}] rho {rho:.4} alpha {alpha:4.4}')
 
         rho_prev = rho
         e = xr_step(x, p, r, v, alpha, [])
@@ -126,7 +126,7 @@ def cg(
 
         errs += [numpy.sqrt(err2) / b_norm]
 
-        logging.debug('err {}'.format(errs[-1]))
+        logging.debug(f'err {errs[-1]}')
 
         if errs[-1] < err_threshold:
             success = True
@@ -136,8 +136,8 @@ def cg(
         e = a_step(v, m, p, e)
         alpha = rho / dot(p, v, e)
 
-        if verbose and k % 1000 == 0:
-            logging.info('iteration {}'.format(k))
+        if k % 1000 == 0:
+            logger.info(f'iteration {k}')
 
     '''
     Done solving
@@ -150,12 +150,12 @@ def cg(
         logging.info('Solve success')
     else:
         logging.warning('Solve failure')
-    logging.info('{} iterations in {} sec: {} iterations/sec \
-                  '.format(k, time_elapsed, k / time_elapsed))
-    logging.debug('final error {}'.format(errs[-1]))
-    logging.debug('overhead {} sec'.format(start_time2 - start_time))
+    logging.info(f'{k} iterations in {time_elapsed} sec: {k / time_elapsed} iterations/sec')
+    logging.debug(f'final error {errs[-1]}')
+    logging.debug(f'overhead {start_time2 - start_time} sec')
 
-    logging.info('Final residual: {}'.format(norm(A @ x - b) / norm(b)))
+    residual = norm(A @ x - b) / norm(b)
+    logging.info(f'Final residual: {residual}')
     return x
 
 

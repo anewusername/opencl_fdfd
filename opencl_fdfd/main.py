@@ -179,13 +179,13 @@ def cg_solver(
 
     _, err2 = rhoerr_step(r, [])
     b_norm = numpy.sqrt(err2)
-    logging.debug('b_norm check: {}'.format(b_norm))
+    logging.debug(f'b_norm check: {b_norm}')
 
     success = False
     for k in range(max_iters):
         do_print = (k % 100 == 0)
         if do_print:
-            logger.debug('[{:06d}] rho {:.4} alpha {:4.4}'.format(k, rho, alpha))
+            logger.debug(f'[{k:06d}] rho {rho:.4} alpha {alpha:4.4}')
 
         rho_prev = rho
         e = xr_step(x, p, r, v, alpha, [])
@@ -194,7 +194,7 @@ def cg_solver(
         errs += [numpy.sqrt(err2) / b_norm]
 
         if do_print:
-            logger.debug('err {}'.format(errs[-1]))
+            logger.debug(f'err {errs[-1]}')
 
         if errs[-1] < err_threshold:
             success = True
@@ -205,7 +205,7 @@ def cg_solver(
         alpha = rho / dot(p, v, e)
 
         if k % 1000 == 0:
-            logger.info('iteration {}'.format(k))
+            logger.info(f'iteration {k}')
 
     '''
     Done solving
@@ -222,15 +222,16 @@ def cg_solver(
         logger.info('Solve success')
     else:
         logger.warning('Solve failure')
-    logger.info('{} iterations in {} sec: {} iterations/sec \
-                  '.format(k, time_elapsed, k / time_elapsed))
-    logger.debug('final error {}'.format(errs[-1]))
-    logger.debug('overhead {} sec'.format(start_time2 - start_time))
+    logger.info(f'{k} iterations in {time_elapsed} sec: {k / time_elapsed} iterations/sec')
+    logger.debug(f'final error {errs[-1]}')
+    logger.debug(f'overhead {start_time2 - start_time} sec')
 
     A0 = meanas.fdfd.operators.e_full(omega, dxes, epsilon, mu).tocsr()
     if adjoint:
         # Remember we conjugated all the contents of A earlier
         A0 = A0.T
-    logger.info('Post-everything residual: {}'.format(norm(A0 @ x - b) / norm(b)))
+
+    residual = norm(A0 @ x - b) / norm(b)
+    logger.info(f'Post-everything residual: {residual}')
     return x
 
