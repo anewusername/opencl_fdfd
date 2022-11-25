@@ -42,6 +42,7 @@ def type_to_C(
         string containing the corresponding C type (eg. 'double')
     """
     types = {
+        numpy.float16: 'half',
         numpy.float32: 'float',
         numpy.float64: 'double',
         numpy.complex64: 'cfloat_t',
