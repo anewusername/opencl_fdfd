@@ -37,7 +37,7 @@
     - jinja2
 """
 
-from .main import cg_solver
+from .main import cg_solver as cg_solver
 
 __author__ = 'Jan Petykiewicz'
 __version__ = '0.4'
