@@ -61,17 +61,17 @@ ctype = type_to_C(numpy.complex128)
 ctype_bare = 'cdouble'
 
 # Preamble for all OpenCL code
-preamble = '''
+preamble = f'''
 #define PYOPENCL_DEFINE_CDOUBLE
 #include <pyopencl-complex.h>
 
 //Defines to clean up operation and type names
-#define ctype {ctype}_t
-#define zero {ctype}_new(0.0, 0.0)
-#define add {ctype}_add
-#define sub {ctype}_sub
-#define mul {ctype}_mul
-'''.format(ctype=ctype_bare)
+#define ctype {ctype_bare}_t
+#define zero {ctype_bare}_new(0.0, 0.0)
+#define add {ctype_bare}_add
+#define sub {ctype_bare}_sub
+#define mul {ctype_bare}_mul
+'''
 
 
 def ptrs(*args: str) -> list[str]:
