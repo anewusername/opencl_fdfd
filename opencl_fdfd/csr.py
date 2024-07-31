@@ -31,7 +31,6 @@ from . import ops
 if TYPE_CHECKING:
     import scipy
 
-__author__ = 'Jan Petykiewicz'
 
 logger = logging.getLogger(__name__)
 
@@ -99,18 +98,18 @@ def cg(
 
     m = CSRMatrix(queue, A)
 
-    '''
-    Generate OpenCL kernels
-    '''
+    #
+    # Generate OpenCL kernels
+    #
     a_step = ops.create_a_csr(context)
     xr_step = ops.create_xr_step(context)
     rhoerr_step = ops.create_rhoerr_step(context)
     p_step = ops.create_p_step(context)
     dot = ops.create_dot(context)
 
-    '''
-    Start the solve
-    '''
+    #
+    # Start the solve
+    #
     start_time2 = time.perf_counter()
 
     _, err2 = rhoerr_step(r, [])
@@ -140,9 +139,9 @@ def cg(
         if k % 1000 == 0:
             logger.info(f'iteration {k}')
 
-    '''
-    Done solving
-    '''
+    #
+    # Done solving
+    #
     time_elapsed = time.perf_counter() - start_time
 
     x = x.get()

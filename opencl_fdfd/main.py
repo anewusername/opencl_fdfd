@@ -20,8 +20,6 @@ import meanas.fdfd.operators
 from . import ops
 
 
-__author__ = 'Jan Petykiewicz'
-
 logger = logging.getLogger(__name__)
 
 
@@ -113,9 +111,9 @@ def cg_solver(
     L, R = meanas.fdfd.operators.e_full_preconditioners(dxes)
     b_preconditioned = (R if adjoint else L) @ b
 
-    '''
-        Allocate GPU memory and load in data
-    '''
+    #
+    # Allocate GPU memory and load in data
+    #
     if context is None:
         context = pyopencl.create_some_context(interactive=True)
 
@@ -155,10 +153,10 @@ def cg_solver(
     else:
         gpmc = load_field(numpy.asarray(pmc, dtype=bool), dtype=numpy.int8)
 
-    '''
-    Generate OpenCL kernels
-    '''
-    has_mu, has_pec, has_pmc = [q is not None for q in (mu, pec, pmc)]
+    #
+    # Generate OpenCL kernels
+    #
+    has_mu, has_pec, has_pmc = (qq is not None for qq in (mu, pec, pmc))
 
     a_step_full = ops.create_a(context, shape, has_mu, has_pec, has_pmc)
     xr_step = ops.create_xr_step(context)
@@ -174,9 +172,9 @@ def cg_solver(
             ) -> list[pyopencl.Event]:
         return a_step_full(E, H, p, inv_dxes, oeps, invm, gpec, gpmc, Pl, Pr, events)
 
-    '''
-    Start the solve
-    '''
+    #
+    # Start the solve
+    #
     start_time2 = time.perf_counter()
 
     _, err2 = rhoerr_step(r, [])
@@ -209,16 +207,13 @@ def cg_solver(
         if k % 1000 == 0:
             logger.info(f'iteration {k}')
 
-    '''
-    Done solving
-    '''
+    #
+    # Done solving
+    #
     time_elapsed = time.perf_counter() - start_time
 
     # Undo preconditioners
-    if adjoint:
-        x = (Pl * x).get()
-    else:
-        x = (Pr * x).get()
+    x = ((Pl if adjoint else Pr) * x).get()
 
     if success:
         logger.info('Solve success')

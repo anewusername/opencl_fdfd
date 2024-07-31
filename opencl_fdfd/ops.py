@@ -56,6 +56,7 @@ def type_to_C(
 
     return types[float_type]
 
+
 # Type names
 ctype = type_to_C(numpy.complex128)
 ctype_bare = 'cdouble'
@@ -123,9 +124,9 @@ def create_a(
     des = [ctype + ' *inv_de' + a for a in 'xyz']
     dhs = [ctype + ' *inv_dh' + a for a in 'xyz']
 
-    '''
-    Convert p to initial E (ie, apply right preconditioner and PEC)
-    '''
+    #
+    # Convert p to initial E (ie, apply right preconditioner and PEC)
+    #
     p2e_source = jinja_env.get_template('p2e.cl').render(pec=pec)
     P2E_kernel = ElementwiseKernel(
         context,
@@ -135,9 +136,9 @@ def create_a(
         arguments=', '.join(ptrs('E', 'p', 'Pr') + pec_arg),
         )
 
-    '''
-    Calculate intermediate H from intermediate E
-    '''
+    #
+    # Calculate intermediate H from intermediate E
+    #
     e2h_source = jinja_env.get_template('e2h.cl').render(
         mu=mu,
         pmc=pmc,
@@ -151,9 +152,9 @@ def create_a(
         arguments=', '.join(ptrs('E', 'H', 'inv_mu') + pmc_arg + des),
         )
 
-    '''
-    Calculate final E (including left preconditioner)
-    '''
+    #
+    # Calculate final E (including left preconditioner)
+    #
     h2e_source = jinja_env.get_template('h2e.cl').render(
         pec=pec,
         common_cl=common_source,
@@ -277,7 +278,7 @@ def create_rhoerr_step(context: pyopencl.Context) -> Callable[..., tuple[complex
 
     def ri_update(r: pyopencl.array.Array, e: list[pyopencl.Event]) -> tuple[complex, complex]:
         g = ri_kernel(r, wait_for=e).astype(ri_dtype).get()
-        rr, ri, ii = [g[q] for q in 'xyz']
+        rr, ri, ii = (g[qq] for qq in 'xyz')
         rho = rr + 2j * ri - ii
         err = rr + ii
         return rho, err
