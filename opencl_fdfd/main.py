@@ -70,7 +70,7 @@ def cg_solver(
 
     shape = [dd.size for dd in dxes[0]]
 
-    b = -1j * omega * numpy.array(J, copy=False)
+    b = -1j * omega * numpy.asarray(J)
 
     '''
         ** In this comment, I use the following notation:
@@ -99,7 +99,8 @@ def cg_solver(
         We can accomplish all this simply by conjugating everything (except J) and
          reversing the order of L and R
     '''
-    epsilon = numpy.array(epsilon, copy=False)
+    epsilon = numpy.asarray(epsilon)
+
     if adjoint:
         # Conjugate everything
         dxes = [[numpy.conj(dd) for dd in dds] for dds in dxes]
@@ -133,26 +134,26 @@ def cg_solver(
     rho = 1.0 + 0j
     errs = []
 
-    inv_dxes = [[load_field(1 / numpy.array(dd, copy=False)) for dd in dds] for dds in dxes]
-    oeps = load_field(-omega ** 2 * epsilon)
+    inv_dxes = [[load_field(1 / numpy.asarray(dd)) for dd in dds] for dds in dxes]
+    oeps = load_field(-omega * omega * epsilon)
     Pl = load_field(L.diagonal())
     Pr = load_field(R.diagonal())
 
     if mu is None:
         invm = load_field(numpy.array([]))
     else:
-        invm = load_field(1 / numpy.array(mu, copy=False))
-        mu = numpy.array(mu, copy=False)
+        invm = load_field(1 / numpy.asarray(mu))
+        mu = numpy.asarray(mu)
 
     if pec is None:
         gpec = load_field(numpy.array([]), dtype=numpy.int8)
     else:
-        gpec = load_field(numpy.array(pec, dtype=bool, copy=False), dtype=numpy.int8)
+        gpec = load_field(numpy.asarray(pec, dtype=bool), dtype=numpy.int8)
 
     if pmc is None:
         gpmc = load_field(numpy.array([]), dtype=numpy.int8)
     else:
-        gpmc = load_field(numpy.array(pmc, dtype=bool, copy=False), dtype=numpy.int8)
+        gpmc = load_field(numpy.asarray(pmc, dtype=bool), dtype=numpy.int8)
 
     '''
     Generate OpenCL kernels

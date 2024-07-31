@@ -88,7 +88,7 @@ def cg(
     def load_field(v: NDArray[numpy.complexfloating], dtype: type = numpy.complex128) -> pyopencl.array.Array:
         return pyopencl.array.to_device(queue, v.astype(dtype))
 
-    r = load_field(b)
+    r = load_field(numpy.asarray(b))
     x = pyopencl.array.zeros_like(r)
     v = pyopencl.array.zeros_like(r)
     p = pyopencl.array.zeros_like(r)
