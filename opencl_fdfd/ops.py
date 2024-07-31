@@ -25,6 +25,11 @@ from .csr import CSRMatrix
 
 logger = logging.getLogger(__name__)
 
+
+class FDFDError(Exception):
+    """ Custom error for opencl_fdfd """
+    pass
+
 # Create jinja2 env on module load
 jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, 'kernels'))
 
@@ -52,7 +57,7 @@ def type_to_C(
         numpy.complex128: 'cdouble_t',
     }
     if float_type not in types:
-        raise Exception('Unsupported type')
+        raise FDFDError('Unsupported type')
 
     return types[float_type]
 
