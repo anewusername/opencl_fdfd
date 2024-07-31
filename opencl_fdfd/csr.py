@@ -14,21 +14,22 @@ satisfy the constraints for the 'conjugate gradient' algorithm
 (positive definite, symmetric) and some that don't.
 """
 
-from typing import Dict, Any, Optional
+from typing import Any, TYPE_CHECKING
 import time
 import logging
 
 import numpy
 from numpy.typing import NDArray, ArrayLike
 from numpy.linalg import norm
+from numpy import complexfloating
 import pyopencl
 import pyopencl.array
-import scipy
-
 import meanas.fdfd.solvers
 
 from . import ops
 
+if TYPE_CHECKING:
+    import scipy
 
 __author__ = 'Jan Petykiewicz'
 
@@ -58,9 +59,9 @@ def cg(
         b: ArrayLike,
         max_iters: int = 10000,
         err_threshold: float = 1e-6,
-        context: Optional[pyopencl.Context] = None,
-        queue: Optional[pyopencl.CommandQueue] = None,
-        ) -> NDArray:
+        context: pyopencl.Context | None = None,
+        queue: pyopencl.CommandQueue | None = None,
+        ) -> NDArray[complexfloating]:
     """
     General conjugate-gradient solver for sparse matrices, where A @ x = b.
 
@@ -84,7 +85,7 @@ def cg(
     if queue is None:
         queue = pyopencl.CommandQueue(context)
 
-    def load_field(v, dtype=numpy.complex128):
+    def load_field(v: NDArray[numpy.complexfloating], dtype: type = numpy.complex128) -> pyopencl.array.Array:
         return pyopencl.array.to_device(queue, v.astype(dtype))
 
     r = load_field(b)
@@ -160,9 +161,9 @@ def cg(
 
 
 def fdfd_cg_solver(
-        solver_opts: Optional[Dict[str, Any]] = None,
-        **fdfd_args
-        ) -> NDArray:
+        solver_opts: dict[str, Any] | None = None,
+        **fdfd_args,
+        ) -> NDArray[complexfloating]:
     """
     Conjugate gradient FDFD solver using CSR sparse matrices, mainly for
      testing and development since it's much slower than the solver in main.py.

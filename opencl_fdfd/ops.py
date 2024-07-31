@@ -7,11 +7,11 @@ kernels for use by the other solvers.
 See kernels/ for any of the .cl files loaded in this file.
 """
 
-from typing import List, Callable, Union, Type, Sequence, Optional, Tuple
+from collections.abc import Callable, Sequence
 import logging
 
 import numpy
-from numpy.typing import NDArray, ArrayLike
+from numpy.typing import ArrayLike
 import jinja2
 
 import pyopencl
@@ -20,17 +20,20 @@ from pyopencl.elementwise import ElementwiseKernel
 from pyopencl.reduction import ReductionKernel
 
 
+from .csr import CSRMatrix
+
+
 logger = logging.getLogger(__name__)
 
 # Create jinja2 env on module load
 jinja_env = jinja2.Environment(loader=jinja2.PackageLoader(__name__, 'kernels'))
 
 # Return type for the create_opname(...) functions
-operation = Callable[..., List[pyopencl.Event]]
+operation = Callable[..., list[pyopencl.Event]]
 
 
 def type_to_C(
-        float_type: Type,
+        float_type: type[numpy.floating | numpy.complexfloating],
         ) -> str:
     """
     Returns a string corresponding to the C equivalent of a numpy type.
@@ -71,7 +74,7 @@ preamble = '''
 '''.format(ctype=ctype_bare)
 
 
-def ptrs(*args: str) -> List[str]:
+def ptrs(*args: str) -> list[str]:
     return [ctype + ' *' + s for s in args]
 
 
@@ -169,13 +172,13 @@ def create_a(
             p: pyopencl.array.Array,
             idxes: Sequence[Sequence[pyopencl.array.Array]],
             oeps: pyopencl.array.Array,
-            inv_mu: Optional[pyopencl.array.Array],
-            pec: Optional[pyopencl.array.Array],
-            pmc: Optional[pyopencl.array.Array],
+            inv_mu: pyopencl.array.Array | None,
+            pec: pyopencl.array.Array | None,
+            pmc: pyopencl.array.Array | None,
             Pl: pyopencl.array.Array,
             Pr: pyopencl.array.Array,
-            e: List[pyopencl.Event],
-            ) -> List[pyopencl.Event]:
+            e: list[pyopencl.Event],
+            ) -> list[pyopencl.Event]:
         e2 = P2E_kernel(E, p, Pr, pec, wait_for=e)
         e2 = E2H_kernel(E, H, inv_mu, pmc, *idxes[0], wait_for=[e2])
         e2 = H2E_kernel(E, H, oeps, Pl, pec, *idxes[1], wait_for=[e2])
@@ -227,14 +230,14 @@ def create_xr_step(context: pyopencl.Context) -> operation:
             r: pyopencl.array.Array,
             v: pyopencl.array.Array,
             alpha: complex,
-            e: List[pyopencl.Event],
-            ) -> List[pyopencl.Event]:
+            e: list[pyopencl.Event],
+            ) -> list[pyopencl.Event]:
         return [xr_kernel(x, p, r, v, alpha, wait_for=e)]
 
     return xr_update
 
 
-def create_rhoerr_step(context: pyopencl.Context) -> Callable[..., Tuple[complex, complex]]:
+def create_rhoerr_step(context: pyopencl.Context) -> Callable[..., tuple[complex, complex]]:
     """
     Return a function
      ri_update(r, e)
@@ -272,7 +275,7 @@ def create_rhoerr_step(context: pyopencl.Context) -> Callable[..., Tuple[complex
         arguments=ctype + ' *r',
         )
 
-    def ri_update(r: pyopencl.array.Array, e: List[pyopencl.Event]) -> Tuple[complex, complex]:
+    def ri_update(r: pyopencl.array.Array, e: list[pyopencl.Event]) -> tuple[complex, complex]:
         g = ri_kernel(r, wait_for=e).astype(ri_dtype).get()
         rr, ri, ii = [g[q] for q in 'xyz']
         rho = rr + 2j * ri - ii
@@ -315,7 +318,7 @@ def create_p_step(context: pyopencl.Context) -> operation:
             p: pyopencl.array.Array,
             r: pyopencl.array.Array,
             beta: complex,
-            e: List[pyopencl.Event]) -> List[pyopencl.Event]:
+            e: list[pyopencl.Event]) -> list[pyopencl.Event]:
         return [p_kernel(p, r, beta, wait_for=e)]
 
     return p_update
@@ -350,7 +353,7 @@ def create_dot(context: pyopencl.Context) -> Callable[..., complex]:
     def dot(
             p: pyopencl.array.Array,
             v: pyopencl.array.Array,
-            e: List[pyopencl.Event],
+            e: list[pyopencl.Event],
             ) -> complex:
         g = dot_kernel(p, v, wait_for=e)
         return g.get()
@@ -406,11 +409,11 @@ def create_a_csr(context: pyopencl.Context) -> operation:
         )
 
     def spmv(
-            v_out,
-            m,
-            v_in,
-            e: List[pyopencl.Event],
-            ) -> List[pyopencl.Event]:
+            v_out: pyopencl.array.Array,
+            m: CSRMatrix,
+            v_in: pyopencl.array.Array,
+            e: list[pyopencl.Event],
+            ) -> list[pyopencl.Event]:
         return [spmv_kernel(v_out, m.row_ptr, m.col_ind, m.data, v_in, wait_for=e)]
 
     return spmv

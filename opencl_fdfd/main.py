@@ -5,14 +5,13 @@ This file holds the default FDFD solver, which uses an E-field wave
 operator implemented directly as OpenCL arithmetic (rather than as
 a matrix).
 """
-
-from typing import List, Optional, cast
 import time
 import logging
 
 import numpy
 from numpy.typing import NDArray, ArrayLike
 from numpy.linalg import norm
+from numpy import floating, complexfloating
 import pyopencl
 import pyopencl.array
 
@@ -28,16 +27,16 @@ logger = logging.getLogger(__name__)
 
 def cg_solver(
         omega: complex,
-        dxes: List[List[NDArray]],
+        dxes: list[list[NDArray[floating | complexfloating]]],
         J: ArrayLike,
         epsilon: ArrayLike,
-        mu: Optional[ArrayLike] = None,
-        pec: Optional[ArrayLike] = None,
-        pmc: Optional[ArrayLike] = None,
+        mu: ArrayLike | None = None,
+        pec: ArrayLike | None = None,
+        pmc: ArrayLike | None = None,
         adjoint: bool = False,
         max_iters: int = 40000,
         err_threshold: float = 1e-6,
-        context: Optional[pyopencl.Context] = None,
+        context: pyopencl.Context | None = None,
         ) -> NDArray:
     """
     OpenCL FDFD solver using the iterative conjugate gradient (cg) method
@@ -108,13 +107,10 @@ def cg_solver(
         epsilon = numpy.conj(epsilon)
         if mu is not None:
             mu = numpy.conj(mu)
+    assert isinstance(epsilon, NDArray[floating] | NDArray[complexfloating])
 
     L, R = meanas.fdfd.operators.e_full_preconditioners(dxes)
-
-    if adjoint:
-        b_preconditioned = R @ b
-    else:
-        b_preconditioned = L @ b
+    b_preconditioned = (R if adjoint else L) @ b
 
     '''
         Allocate GPU memory and load in data
@@ -124,7 +120,7 @@ def cg_solver(
 
     queue = pyopencl.CommandQueue(context)
 
-    def load_field(v, dtype=numpy.complex128):
+    def load_field(v: NDArray[complexfloating | floating], dtype: type = numpy.complex128) -> pyopencl.array.Array:
         return pyopencl.array.to_device(queue, v.astype(dtype))
 
     r = load_field(b_preconditioned)  # load preconditioned b into r
@@ -169,7 +165,12 @@ def cg_solver(
     p_step = ops.create_p_step(context)
     dot = ops.create_dot(context)
 
-    def a_step(E, H, p, events):
+    def a_step(
+            E: pyopencl.array.Array,
+            H: pyopencl.array.Array,
+            p: pyopencl.array.Array,
+            events: list[pyopencl.Event],
+            ) -> list[pyopencl.Event]:
         return a_step_full(E, H, p, inv_dxes, oeps, invm, gpec, gpmc, Pl, Pr, events)
 
     '''
